@@ -52,6 +52,7 @@ GOOD_DEAL_DISCOUNT     = 20.0     # % unter Marktwert ab dem ein Deal 🟢 ist
 LADENHUETER_DAYS       = 30       # ab so vielen Tagen ohne Verkauf → Hinweis
 POLL_INTERVAL_MIN      = int(os.environ.get("POLL_INTERVAL_MIN", "20"))  # Watch-Frequenz
 DB_PATH                = os.environ.get("DB_PATH", "resell_data.db")
+GUILD_ID               = os.environ.get("GUILD_ID")  # Server-ID → Befehle erscheinen SOFORT (statt global ~1h)
 
 BROWSER_HEADERS = {
     "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -325,10 +326,15 @@ PLATFORM_CHOICES = [
 @client.event
 async def on_ready():
     init_db()
-    await tree.sync()
+    if GUILD_ID:
+        guild = discord.Object(id=int(GUILD_ID))
+        tree.copy_global_to(guild=guild)      # Befehle diesem Server zuweisen
+        synced = await tree.sync(guild=guild)  # sofort sichtbar
+    else:
+        synced = await tree.sync()             # global (kann ~1h dauern)
     if not watch_loop.is_running():
         watch_loop.start()
-    print(f"✅ Eingeloggt als {client.user} — alle Befehle bereit. Watch-Intervall: {POLL_INTERVAL_MIN} Min.")
+    print(f"✅ Eingeloggt als {client.user} — {len(synced)} Befehle bereit. Watch-Intervall: {POLL_INTERVAL_MIN} Min.")
 
 
 # ---------- /profit ----------

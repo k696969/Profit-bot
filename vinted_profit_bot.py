@@ -272,8 +272,10 @@ def fetch_vinted_search(query, price_to=None, limit=20):
     for it in r.json().get("items", []):
         p = it.get("price")
         price = float(p["amount"]) if isinstance(p, dict) else float(str(p).replace(",", "."))
+        photo = it.get("photo") or {}
+        photo_url = photo.get("url") if isinstance(photo, dict) else None
         out.append({"id": str(it.get("id")), "title": it.get("title") or "Artikel",
-                    "price": price,
+                    "price": price, "photo": photo_url,
                     "url": it.get("url") or f"https://{VINTED_DOMAIN}/items/{it.get('id')}"})
     return out
 
@@ -596,6 +598,48 @@ async def unwatch(interaction, alarm_id: int):
     await interaction.followup.send(f"🔕 Alarm #{alarm_id} entfernt." if ok else f"⚠️ #{alarm_id} nicht gefunden.")
 
 
+def build_watch_embed(w, it, median, prices):
+    """Baut ein Treffer-Embed mit Foto + Profit-Kalkulation (Marktwert best effort)."""
+    buy = it["price"]
+    if median:
+        # Annahme: Einkauf auf Vinted, Weiterverkauf auf eBay zum Median-Marktwert.
+        e = resale(buy, median, "ebay", "vinted")
+        discount = (median - buy) / median * 100 if median else 0
+        if e["margin"] >= GOOD_DEAL_MARGIN and discount >= GOOD_DEAL_DISCOUNT:
+            color = 0x09B83E
+        elif e["profit"] > 0:
+            color = 0xE8A317
+        else:
+            color = 0xD93025
+        icon = verdict_icon(e["profit"], e["margin"])
+    else:
+        e, discount, color, icon = None, None, 0xFEE75C, "🔔"
+
+    emb = discord.Embed(
+        title=f"{icon} Neuer Treffer — {it['title']}"[:256],
+        url=it["url"],
+        description=f"Suche: **{w['query']}**  ·  Limit ≤ {w['max_price']:.2f} €",
+        color=color,
+        timestamp=datetime.now(timezone.utc))
+    emb.add_field(name="🛒 Vinted-Preis (Einkauf)", value=f"**{buy:.2f} €**", inline=True)
+    if e:
+        emb.add_field(name="📊 eBay-Marktwert (Median)", value=f"{median:.2f} €", inline=True)
+        emb.add_field(name="Unter Marktwert", value=f"{discount:.0f} %", inline=True)
+        emb.add_field(
+            name=f"{icon} Geschätzter Weiterverkauf auf eBay",
+            value=(f"VK {median:.2f} € · Gebühr −{e['fee']:.2f} € · Einkauf −{e['acq']:.2f} €\n"
+                   f"→ **Profit {e['profit']:.2f} €** · Marge **{e['margin']:.0f} %**"),
+            inline=False)
+        emb.set_footer(text=f"Marktwert aus {len(prices)} verkauften eBay-Angeboten · vor Steuer · best effort")
+    else:
+        emb.add_field(name="Kalkulation", value="⚠️ Kein eBay-Marktwert abrufbar – prüfe manuell mit `/deal`.",
+                      inline=False)
+    if it.get("photo"):
+        emb.set_thumbnail(url=it["photo"])
+        emb.set_image(url=it["photo"])
+    return emb
+
+
 @tasks.loop(minutes=POLL_INTERVAL_MIN)
 async def watch_loop():
     """Prüft selten & respektvoll alle gespeicherten Suchen und meldet neue Treffer."""
@@ -605,11 +649,25 @@ async def watch_loop():
         except Exception:
             continue  # Block/Fehler überspringen, nächster Durchlauf versucht es erneut
         chan = client.get_channel(int(w["channel_id"]))
-        for it in results:
-            if it["price"] > w["max_price"] or is_seen(w["id"], it["id"]):
-                continue
+        # eBay-Marktwert nur einmal pro Watch abfragen (spart Requests, best effort)
+        median, prices = None, []
+        new_hits = [it for it in results
+                    if it["price"] <= w["max_price"] and not is_seen(w["id"], it["id"])]
+        if new_hits:
+            try:
+                prices = fetch_ebay_market(w["query"], sold=True)
+                median = statistics.median(prices)
+            except Exception:
+                pass
+        for it in new_hits:
             mark_seen(w["id"], it["id"])
-            if chan:
+            if not chan:
+                continue
+            try:
+                emb = build_watch_embed(w, it, median, prices)
+                await chan.send(content=f"🔔 <@{w['user_id']}>", embed=emb)
+            except Exception:
+                # Fallback: einfacher Text, falls Embed scheitert
                 try:
                     await chan.send(
                         f"🔔 <@{w['user_id']}> neuer Treffer für **{w['query']}** ≤ {w['max_price']:.2f} €:\n"

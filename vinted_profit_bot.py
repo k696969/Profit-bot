@@ -38,6 +38,15 @@ import discord
 from discord import app_commands
 from discord.ext import tasks
 
+# .env-Datei laden, falls vorhanden – praktisch für Hoster ohne Env-Var-Feld
+# (z. B. bot-hosting.net): Token einfach in eine Datei .env schreiben.
+# Echte Umgebungsvariablen (z. B. Oracle/Railway) haben weiterhin Vorrang.
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # ╔══════════════════════════════════════════════╗
 # ║  KONFIG                                        ║
 # ╚══════════════════════════════════════════════╝

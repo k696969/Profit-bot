@@ -3,6 +3,11 @@
 Diese Anleitung bringt deinen **Resell-Bot (Vinted ↔ eBay)** dauerhaft online,
 sodass er 24/7 läuft – auch wenn dein PC aus ist.
 
+> 💸 **Railway kostet inzwischen Geld (kein Gratis-Tarif mehr).**
+> Willst du es **komplett kostenlos & ohne Kreditkarte**? → Nimm
+> **[TUTORIAL_BOTHOSTING.md](TUTORIAL_BOTHOSTING.md)** (bot-hosting.net).
+> Die Railway-Anleitung unten lohnt sich nur, wenn du bereits Credits hast.
+
 > **Warum „funktioniert er nicht"?**
 > Ein Discord-Bot ist ein Programm, das **dauerhaft laufen** muss. Solange er nur
 > auf deinem PC startet, ist er offline, sobald du das Fenster schließt. Damit er

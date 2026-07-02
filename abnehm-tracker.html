@@ -176,6 +176,9 @@
   }
   .callout.warn { background: #fdf1e8; color: #8a4a1f; }
 
+  ul.sources { margin: 8px 0 0; padding: 0 0 0 18px; display: flex; flex-direction: column; gap: 10px; font-size: 13.5px; color: var(--ink-2); }
+  ul.sources b { color: var(--ink); }
+  ul.sources a { color: var(--accent-deep); text-underline-offset: 2px; }
   .footer-note { color: var(--muted); font-size: 12.5px; margin-top: 28px; }
   section[hidden] { display: none; }
 </style>
@@ -244,7 +247,7 @@
           <button class="btn" type="submit">Hinzufügen</button>
         </form>
         <div class="chips" id="actPresets"></div>
-        <p class="hint">Die Schnellauswahl rechnet 30 Minuten anhand deines aktuellen Gewichts (MET-Werte).</p>
+        <p class="hint">Schnellauswahl: 30 Minuten, berechnet aus deinem Gewicht mit Netto-MET-Werten aus dem Compendium of Physical Activities (Ainsworth 2011) — nur die <em>zusätzlich</em> zum Grundumsatz verbrannten kcal.</p>
         <ul class="entries" id="actList"></ul>
       </div>
     </div>
@@ -347,15 +350,15 @@
               <option value="0.25">Gemütlich — 0,25 kg/Woche</option>
               <option value="0.5" selected>Empfohlen — 0,5 kg/Woche</option>
               <option value="0.75">Zügig — 0,75 kg/Woche</option>
-              <option value="1">Aggressiv — 1 kg/Woche</option>
+              <option value="1">Obergrenze der Leitlinien — 1 kg/Woche</option>
             </select>
           </div>
           <div class="field">
-            <label for="pProtein">Proteinziel (g pro kg Körpergewicht)</label>
+            <label for="pProtein">Proteinziel (g pro kg Zielgewicht)</label>
             <select id="pProtein">
-              <option value="1.5">1,5 g/kg — Basis</option>
-              <option value="1.8" selected>1,8 g/kg — empfohlen beim Abnehmen</option>
-              <option value="2.2">2,2 g/kg — intensives Krafttraining</option>
+              <option value="1.2">1,2 g/kg — Basis ohne Training</option>
+              <option value="1.6" selected>1,6 g/kg — belegtes Optimum (Morton 2018)</option>
+              <option value="2.2">2,2 g/kg — Diät + hartes Krafttraining (Helms 2014)</option>
             </select>
           </div>
         </div>
@@ -381,7 +384,21 @@
       </div>
     </div>
 
-    <p class="footer-note">Berechnung: Grundumsatz nach Mifflin-St Jeor, Gesamtumsatz über Aktivitätsfaktor (PAL), Defizit über ≈ 7 700 kcal pro kg Körperfett. Richtwerte — kein Ersatz für ärztliche Beratung.</p>
+    <div class="card">
+      <h2>Wissenschaftliche Grundlagen</h2>
+      <p style="margin:0 0 4px">Jede Berechnung in dieser App basiert auf veröffentlichten Studien und Leitlinien:</p>
+      <ul class="sources">
+        <li><b>Grundumsatz:</b> Mifflin-St-Jeor-Formel (<a href="https://pubmed.ncbi.nlm.nih.gov/2305711/" target="_blank" rel="noopener">Mifflin et al. 1990</a>). Ein systematischer Review der American Dietetic Association fand sie als genaueste Schätzformel — bei ~70–82 % der Menschen innerhalb von ±10 % des gemessenen Werts (<a href="https://pubmed.ncbi.nlm.nih.gov/15883556/" target="_blank" rel="noopener">Frankenfield et al. 2005</a>).</li>
+        <li><b>Abnehmtempo:</b> 0,5–1 kg pro Woche entspricht den Empfehlungen von CDC und NHS; langsameres Abnehmen ist mit besserem langfristigem Halten des Gewichts verbunden (<a href="https://www.cdc.gov/healthy-weight-growth/losing-weight/index.html" target="_blank" rel="noopener">CDC</a>, <a href="https://www.nhs.uk/better-health/lose-weight/" target="_blank" rel="noopener">NHS</a>).</li>
+        <li><b>Defizit-Rechnung:</b> ≈ 7 700 kcal pro kg ist eine Näherung. Sie überschätzt den Verlust über längere Zeit, weil der Energieverbrauch beim Abnehmen sinkt — deshalb nutzt die Prognose deinen real gemessenen Trend (<a href="https://pubmed.ncbi.nlm.nih.gov/21872751/" target="_blank" rel="noopener">Hall et al. 2011, The Lancet</a>).</li>
+        <li><b>Protein:</b> Meta-Analyse über 49 Studien: Nutzen für Muskelerhalt/-aufbau steigt bis ~1,6 g/kg/Tag (Konfidenzintervall bis ~2,2) (<a href="https://pubmed.ncbi.nlm.nih.gov/28698222/" target="_blank" rel="noopener">Morton et al. 2018</a>). Im Kaloriendefizit mit Krafttraining sind höhere Mengen sinnvoll (<a href="https://pubmed.ncbi.nlm.nih.gov/24092765/" target="_blank" rel="noopener">Helms et al. 2014</a>). Bezugsgröße ist dein Zielgewicht, damit Körperfett den Bedarf nicht überzeichnet.</li>
+        <li><b>Trinkmenge:</b> Referenzwerte der Europäischen Behörde für Lebensmittelsicherheit: 2,5 l/Tag (Männer) bzw. 2,0 l/Tag (Frauen) Gesamtwasser, davon ~80 % aus Getränken (<a href="https://efsa.onlinelibrary.wiley.com/doi/10.2903/j.efsa.2010.1459" target="_blank" rel="noopener">EFSA 2010</a>).</li>
+        <li><b>Trainings-Kalorien:</b> MET-Werte aus dem Compendium of Physical Activities (<a href="https://pubmed.ncbi.nlm.nih.gov/21681120/" target="_blank" rel="noopener">Ainsworth et al. 2011</a>), als Netto-METs verrechnet, damit der Grundumsatz nicht doppelt zählt.</li>
+        <li><b>Tägliches Wiegen:</b> Systematischer Review: häufigeres Selbst-Wiegen ist mit mehr Gewichtsverlust verbunden, ohne Hinweise auf negative psychische Effekte (<a href="https://pubmed.ncbi.nlm.nih.gov/25521523/" target="_blank" rel="noopener">Zheng et al. 2015</a>).</li>
+      </ul>
+    </div>
+
+    <p class="footer-note">Alle Werte sind evidenzbasierte Richtwerte für gesunde Erwachsene — kein Ersatz für ärztliche oder ernährungstherapeutische Beratung, besonders bei Vorerkrankungen, Schwangerschaft oder Essstörungen.</p>
   </section>
 </div>
 
@@ -430,6 +447,12 @@ function calc() {
   const minKcal = p.sex === "m" ? 1500 : 1200;
   const targetRaw = tdee - deficit;
   const target = Math.max(targetRaw, minKcal);
+  /* Proteinziel aufs Zielgewicht bezogen: g/kg Körpergewicht überschätzt den
+     Bedarf bei höherem Körperfettanteil (vgl. Helms 2014, FFM-basiert). */
+  const proteinBase = Math.min(w, p.goal || w);
+  /* Trinkmenge nach EFSA 2010: AI 2,5 l (M) / 2,0 l (F) Gesamtwasser,
+     davon ~80 % aus Getränken. */
+  const waterLiters = p.sex === "m" ? 2.0 : 1.6;
   return {
     weight: w,
     bmr: Math.round(bmr),
@@ -437,8 +460,9 @@ function calc() {
     deficit: Math.round(deficit),
     target: Math.round(target),
     floored: targetRaw < minKcal,
-    protein: Math.round(p.protein * w),
-    waterGoal: Math.max(6, Math.round(w * 0.033 / 0.25)) // Gläser à 250 ml, ~33 ml/kg
+    protein: Math.round(p.protein * proteinBase),
+    proteinBase,
+    waterGoal: Math.round(waterLiters / 0.25) // Gläser à 250 ml
   };
 }
 function dayTotals(dateKey) {
@@ -550,7 +574,11 @@ function fillProfileForm() {
   document.getElementById("pActivity").value = String(p.activity);
   document.getElementById("pGoal").value = p.goal;
   document.getElementById("pRate").value = String(p.rate);
-  document.getElementById("pProtein").value = String(p.protein);
+  const sel = document.getElementById("pProtein");
+  sel.value = String(p.protein);
+  if (sel.value !== String(p.protein)) { // alter Wert (z. B. 1,8) existiert nicht mehr → auf Standard 1,6 migrieren
+    sel.value = "1.6"; p.protein = 1.6; save();
+  }
 }
 function renderProfil() {
   const c = calc();
@@ -558,28 +586,31 @@ function renderProfil() {
   if (!c) { card.hidden = true; return; }
   card.hidden = false;
   const rows = [
-    ["Grundumsatz (BMR)", fmtNum(c.bmr) + " kcal/Tag"],
-    ["Gesamtumsatz (TDEE)", fmtNum(c.tdee) + " kcal/Tag"],
+    ["Grundumsatz (Mifflin-St Jeor)", fmtNum(c.bmr) + " kcal/Tag"],
+    ["Gesamtumsatz (× Aktivitätsfaktor)", fmtNum(c.tdee) + " kcal/Tag"],
     ["Geplantes Defizit", "−" + fmtNum(c.deficit) + " kcal/Tag"],
     ["Dein Tagesziel", fmtNum(c.target) + " kcal/Tag"],
-    ["Proteinziel", fmtNum(c.protein) + " g/Tag"],
-    ["Wasserziel", fmtNum(c.waterGoal * 0.25, 2) + " l/Tag"]
+    ["Proteinziel (auf " + fmtNum(c.proteinBase, 1) + " kg)", fmtNum(c.protein) + " g/Tag"],
+    ["Trinkmenge (EFSA-Referenzwert)", fmtNum(c.waterGoal * 0.25, 2) + " l/Tag"]
   ];
   document.getElementById("calcSummary").innerHTML =
     rows.map(([k, v]) => `<div class="item"><span>${k}</span><b>${v}</b></div>`).join("");
   const p = state.profile;
   const kgToGo = Math.max(0, currentWeight() - p.goal);
   document.getElementById("calcNote").textContent =
-    `Mit ${fmtNum(c.target)} kcal am Tag verlierst du planmäßig ${fmtNum(p.rate, 2).replace(".", ",")} kg pro Woche — noch ${fmtNum(kgToGo, 1)} kg bis zu deinem Ziel von ${fmtNum(p.goal, 1)} kg.`;
+    `Mit ${fmtNum(c.target)} kcal am Tag verlierst du planmäßig ${fmtNum(p.rate, 2).replace(".", ",")} kg pro Woche — noch ${fmtNum(kgToGo, 1)} kg bis zu deinem Ziel von ${fmtNum(p.goal, 1)} kg. Beachte: Die lineare Rechnung (≈ 7 700 kcal pro kg) überschätzt den Verlust über Monate, weil der Verbrauch beim Abnehmen mitsinkt (Hall 2011). Deine Prognose im Verlauf nutzt deshalb deinen echten Trend, sobald genug Einträge da sind.`;
   const warn = document.getElementById("calcWarn");
   warn.hidden = !c.floored;
-  if (c.floored) warn.textContent = "Dein gewähltes Tempo würde dein Tagesziel unter ein gesundes Minimum drücken. Ich habe es auf " + fmtNum(c.target) + " kcal begrenzt — wähle lieber ein langsameres Tempo.";
+  if (c.floored) warn.textContent = "Dein gewähltes Tempo würde dein Tagesziel unter das übliche klinische Minimum (ca. 1 200 kcal für Frauen, 1 500 kcal für Männer) drücken. Ich habe es auf " + fmtNum(c.target) + " kcal begrenzt — wähle lieber ein langsameres Tempo.";
 }
 
 /* ══════════════ Heute rendern ══════════════ */
+/* MET-Werte aus dem Compendium of Physical Activities (Ainsworth et al. 2011).
+   Verrechnet werden Netto-METs (MET − 1), damit der Grundumsatz nicht doppelt
+   zählt — er steckt schon im Gesamtumsatz. */
 const MET_PRESETS = [
-  ["Spazieren", 3.5], ["Zügiges Gehen", 4.3], ["Joggen", 7.0],
-  ["Radfahren", 6.0], ["Krafttraining", 5.0], ["Schwimmen", 6.0], ["HIIT", 8.0]
+  ["Gehen (4,8 km/h)", 3.5], ["Zügiges Gehen (5,6 km/h)", 4.3], ["Joggen", 7.0],
+  ["Radfahren (16–19 km/h)", 6.8], ["Krafttraining", 3.5], ["Schwimmen (locker)", 6.0], ["HIIT", 8.0]
 ];
 function renderHeute() {
   const c = calc();
@@ -632,7 +663,7 @@ function renderHeute() {
   const w = currentWeight();
   document.getElementById("actPresets").innerHTML = w
     ? MET_PRESETS.map(([n, met]) => {
-        const kcal = Math.round(met * 3.5 * w / 200 * 30);
+        const kcal = Math.round((met - 1) * 3.5 * w / 200 * 30);
         return `<button type="button" onclick="presetActivity('${n}',${kcal})">${n} · ${kcal} kcal</button>`;
       }).join("")
     : "";
@@ -641,7 +672,7 @@ function renderHeute() {
   const todayW = state.weights.find(e => e.date === key);
   document.getElementById("weightHint").textContent = todayW
     ? `Heute eingetragen: ${fmtNum(todayW.kg, 1)} kg. Neuer Eintrag überschreibt den heutigen Wert.`
-    : "Am besten morgens, nüchtern, immer zur gleichen Zeit wiegen.";
+    : "Tägliches Wiegen ist laut Studien mit besserem Abnehmerfolg verbunden (Zheng 2015). Morgens, nüchtern, gleiche Zeit — Tagesschwankungen sind normal, der Trend zählt.";
 
   /* Wasser */
   const glasses = state.water[key] || 0;

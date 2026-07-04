@@ -215,7 +215,7 @@
     border-top: 1px solid var(--hairline);
     padding-bottom: env(safe-area-inset-bottom);
   }
-  nav.bottom .inner { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; }
+  nav.bottom .inner { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); }
   nav.bottom button {
     appearance: none; border: none; background: transparent; cursor: pointer;
     font: inherit; font-size: 11.5px; font-weight: 650; color: var(--muted);
@@ -304,6 +304,34 @@
     background: rgba(0, 0, 0, 0.55); color: #fff; border-radius: 8px; width: 30px; height: 30px; font-size: 15px;
   }
   .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* ── Trainings-Tagebuch ── */
+  .chips button.sel { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .exblock { border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .setrow { display: grid; grid-template-columns: 52px 1fr 1fr; gap: 8px; align-items: center; }
+  .setrow .sn { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .minibtn {
+    appearance: none; font: inherit; font-size: 13.5px; font-weight: 650; cursor: pointer;
+    background: var(--accent-wash); color: var(--accent-deep); border: none;
+    border-radius: 10px; padding: 9px 13px; min-height: 40px;
+  }
+  .minibtn.danger { background: var(--over-wash); color: var(--over); }
+  .lasthint { margin: 0; }
+  .dotgrid { display: grid; grid-template-columns: repeat(14, 1fr); gap: 7px; }
+  .dotgrid span { width: 100%; aspect-ratio: 1; border-radius: 50%; background: var(--page); border: 1px solid var(--line); }
+  .dotgrid span.t-kraft { background: var(--accent); border-color: var(--accent); }
+  .dotgrid span.t-kampf { background: #e08a2e; border-color: #e08a2e; }
+  .dotgrid span.t-cardio { background: var(--series-1); border-color: var(--series-1); }
+  .dotgrid span.t-sonst { background: var(--muted); border-color: var(--muted); }
+  .dotlegend { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 3px 0 10px; vertical-align: baseline; }
+  .wohead { display: flex; align-items: center; gap: 10px; }
+  .wohead .woico { font-size: 21px; }
+  .wohead .wotitle { flex: 1; min-width: 0; }
+  .wohead .wotitle b { display: block; font-size: 15.5px; }
+  .wohead .wotitle span { font-size: 12.5px; color: var(--muted); }
+  .woex { border-top: 1px solid var(--line); padding: 8px 0 2px; margin-top: 10px; font-size: 14.5px; }
+  .woex .exname { font-weight: 650; }
+  .woex .exsets { color: var(--ink-2); font-variant-numeric: tabular-nums; font-size: 13.5px; }
 </style>
 
 <div class="wrap">
@@ -400,6 +428,19 @@
         </table>
       </div>
     </div>
+  </section>
+
+  <!-- ════════ TAB: TRAINING ════════ -->
+  <section id="tab-training" hidden>
+    <div class="statrow" id="twStats"></div>
+    <div class="card">
+      <h2>Letzte 4 Wochen</h2>
+      <div class="dotgrid" id="dotGrid"></div>
+      <p class="hint" style="line-height:2"><span class="dotlegend" style="background:var(--accent);margin-left:0"></span>Kraftsport<span class="dotlegend" style="background:#e08a2e"></span>Kampfsport<span class="dotlegend" style="background:var(--series-1)"></span>Cardio<span class="dotlegend" style="background:var(--muted)"></span>Sonstiges</p>
+    </div>
+    <p style="margin:0 0 12px"><button class="btn" style="width:100%" onclick="openSheet('trainSheet')">＋ Training eintragen</button></p>
+    <div id="workoutList"></div>
+    <p class="empty" id="workoutEmpty" style="padding:0 4px">Noch keine Einheiten — trag dein erstes Training ein! 🏋️</p>
   </section>
 
   <!-- ════════ TAB: FOTOS ════════ -->
@@ -537,18 +578,30 @@
   <div class="sheet-inner">
     <div class="sheet-grip"></div>
     <h3>Training eintragen</h3>
-    <p class="hint" style="margin:0 0 10px">Schnellauswahl — 30 min, berechnet aus deinem Gewicht (Netto-MET, Ainsworth 2011):</p>
-    <div class="chips" id="actPresets" style="margin-bottom:16px"></div>
-    <form onsubmit="addActivity(event)">
-      <div class="field"><label for="actName">Oder eigenes Training</label>
-        <input id="actName" placeholder="z. B. Krafttraining 45 min"></div>
-      <div class="field"><label for="actKcal">kcal verbrannt (z. B. von der Sportuhr)</label>
-        <input id="actKcal" type="number" min="1" max="5000" placeholder="300" inputmode="numeric"></div>
-      <button class="btn" type="submit">Hinzufügen</button>
-      <button class="btn ghost" type="button" onclick="closeSheet('trainSheet')">Abbrechen</button>
-    </form>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="chips" id="twType"></div>
+      <div class="row2">
+        <div class="field"><label for="twMin">Dauer (min)</label>
+          <input id="twMin" type="number" value="60" min="1" max="600" inputmode="numeric" oninput="twAutoKcal()"></div>
+        <div class="field"><label for="twKcal">kcal (auto — anpassbar)</label>
+          <input id="twKcal" type="number" min="0" max="5000" inputmode="numeric" oninput="twKcalTouched=true"></div>
+      </div>
+      <div id="exList" style="display:flex;flex-direction:column;gap:10px"></div>
+      <button type="button" class="minibtn" onclick="addExercise()">＋ Übung hinzufügen (Sätze · Wdh. · kg)</button>
+      <button type="button" class="btn" onclick="saveWorkout()">Speichern</button>
+      <button type="button" class="btn ghost" onclick="closeSheet('trainSheet')">Abbrechen</button>
+    </div>
   </div>
 </dialog>
+<datalist id="exNames">
+  <option value="Bankdrücken"></option><option value="Kniebeugen"></option><option value="Kreuzheben"></option>
+  <option value="Schulterdrücken"></option><option value="Rudern (Langhantel)"></option><option value="Rudern (Kabel)"></option>
+  <option value="Latzug"></option><option value="Klimmzüge"></option><option value="Dips"></option>
+  <option value="Bizeps-Curls"></option><option value="Trizepsdrücken"></option><option value="Beinpresse"></option>
+  <option value="Beinstrecker"></option><option value="Beinbeuger"></option><option value="Ausfallschritte"></option>
+  <option value="Hip Thrust"></option><option value="Seitheben"></option><option value="Wadenheben"></option>
+  <option value="Schrägbankdrücken"></option><option value="Crunches"></option><option value="Plank"></option>
+</datalist>
 
 <!-- ════════ BOTTOM NAV ════════ -->
 <nav class="bottom">
@@ -556,6 +609,10 @@
     <button id="tabbtn-heute" class="active" onclick="showTab('heute')">
       <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg>
       Heute
+    </button>
+    <button id="tabbtn-training" onclick="showTab('training')">
+      <svg viewBox="0 0 24 24"><path d="M3 12h2.5M18.5 12H21M8.5 12h7"/><path d="M6.2 8.5v7M17.8 8.5v7M9.8 6.8v10.4M14.2 6.8v10.4"/></svg>
+      Training
     </button>
     <button id="tabbtn-verlauf" onclick="showTab('verlauf')">
       <svg viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M5 15.5 10 10l3.5 3.5L19 7"/></svg>
@@ -576,7 +633,7 @@
 "use strict";
 /* ══════════════ Daten & Persistenz ══════════════ */
 const STORE_KEY = "wandel-tracker-v1";
-const DEFAULT_STATE = { profile: null, weights: [], meals: [], activities: [], water: {}, favorites: [] };
+const DEFAULT_STATE = { profile: null, weights: [], meals: [], activities: [], water: {}, favorites: [], workouts: [] };
 let state = load();
 
 function load() {
@@ -585,6 +642,7 @@ function load() {
     if (raw) {
       const s = Object.assign({}, DEFAULT_STATE, JSON.parse(raw));
       if (!Array.isArray(s.favorites)) s.favorites = [];
+      if (!Array.isArray(s.workouts)) s.workouts = [];
       return s;
     }
   } catch (e) { /* beschädigte Daten → frisch starten */ }
@@ -695,16 +753,18 @@ const FOODS = [
 
 /* ══════════════ Tabs & Sheets ══════════════ */
 function showTab(name) {
-  for (const t of ["heute", "verlauf", "fotos", "profil"]) {
+  for (const t of ["heute", "training", "verlauf", "fotos", "profil"]) {
     document.getElementById("tab-" + t).hidden = (t !== name);
     document.getElementById("tabbtn-" + t).classList.toggle("active", t === name);
   }
   window.scrollTo(0, 0);
+  if (name === "training") renderTraining();
   if (name === "verlauf") renderVerlauf();
   if (name === "fotos") renderFotos();
 }
 function openSheet(id) {
   if (id === "mealSheet") { renderFavChips(); hideSuggest(); }
+  if (id === "trainSheet") initWorkoutSheet();
   document.getElementById(id).showModal();
 }
 function closeSheet(id) {
@@ -779,21 +839,179 @@ function pickSuggest(btn) {
   document.getElementById("mealProtein").value = btn.dataset.prot;
   hideSuggest();
 }
-function addActivity(ev) {
-  ev.preventDefault();
-  const name = document.getElementById("actName").value.trim();
-  const kcal = parseInt(document.getElementById("actKcal").value, 10);
-  if (!name || !kcal) return;
-  state.activities.push({ id: uid(), date: todayKey(), name, kcal });
-  save(); ev.target.reset(); closeSheet("trainSheet"); renderHeute();
-}
-function presetActivity(name, kcal) {
-  state.activities.push({ id: uid(), date: todayKey(), name: name + " (30 min)", kcal });
-  save(); closeSheet("trainSheet"); renderHeute();
-}
 function removeEntry(list, id) {
   state[list] = state[list].filter(e => e.id !== id);
+  if (list === "activities") state.workouts = state.workouts.filter(w => w.id !== id); // verknüpfte Einheit mitlöschen
   save(); renderHeute();
+}
+
+/* ══════════════ Trainings-Tagebuch ══════════════ */
+/* Netto-METs: Compendium of Physical Activities (Ainsworth 2011).
+   Kampfsport: bewusst konservatives Mittel aus 10,3 (moderates Tempo) und
+   5,3 (lockeres Tempo), weil echte Einheiten Pausen enthalten — Verbrauch
+   lieber unterschätzen als überschätzen. Der kcal-Wert bleibt anpassbar. */
+const WORKOUT_TYPES = {
+  kraft:  { label: "Kraftsport", ico: "🏋️", met: 3.5 },
+  kampf:  { label: "Kampfsport", ico: "🥊", met: 7.5 },
+  cardio: { label: "Cardio",     ico: "🏃", met: 7.0 },
+  sonst:  { label: "Sonstiges",  ico: "✨", met: 5.0 }
+};
+let twDraft = { type: "kraft", exercises: [] };
+let twKcalTouched = false;
+
+function initWorkoutSheet() {
+  twDraft = { type: "kraft", exercises: [] };
+  twKcalTouched = false;
+  document.getElementById("twMin").value = 60;
+  document.getElementById("exList").innerHTML = "";
+  renderTwType();
+  twAutoKcal();
+}
+function renderTwType() {
+  document.getElementById("twType").innerHTML = Object.entries(WORKOUT_TYPES).map(([k, t]) =>
+    `<button type="button" class="${twDraft.type === k ? "sel" : ""}" onclick="setTwType('${k}')">${t.ico} ${t.label}</button>`).join("");
+}
+function setTwType(k) {
+  twDraft.type = k;
+  renderTwType();
+  twAutoKcal();
+}
+function twAutoKcal() {
+  if (twKcalTouched) return;
+  const w = currentWeight() || 80;
+  const min = parseInt(document.getElementById("twMin").value, 10) || 0;
+  const met = WORKOUT_TYPES[twDraft.type].met;
+  document.getElementById("twKcal").value = min ? Math.round((met - 1) * 3.5 * w / 200 * min) : "";
+}
+function syncDraft() {
+  document.querySelectorAll("#exList .exblock").forEach((block, i) => {
+    const ex = twDraft.exercises[i];
+    if (!ex) return;
+    ex.name = block.querySelector(".exname-in").value.trim();
+    ex.sets = Array.from(block.querySelectorAll(".setrow")).map(row => ({
+      reps: parseInt(row.querySelector(".in-reps").value, 10) || 0,
+      kg: parseFloat((row.querySelector(".in-kg").value || "").replace(",", ".")) || 0
+    }));
+  });
+}
+function addExercise() {
+  syncDraft();
+  twDraft.exercises.push({ name: "", sets: [{ reps: "", kg: "" }, { reps: "", kg: "" }, { reps: "", kg: "" }] });
+  renderExList();
+}
+function delExercise(i) {
+  syncDraft();
+  twDraft.exercises.splice(i, 1);
+  renderExList();
+}
+function addSet(i) {
+  syncDraft();
+  const sets = twDraft.exercises[i].sets;
+  const last = sets[sets.length - 1];
+  sets.push(last ? { reps: last.reps, kg: last.kg } : { reps: "", kg: "" }); // letzten Satz vorbelegen
+  renderExList();
+}
+function renderExList() {
+  document.getElementById("exList").innerHTML = twDraft.exercises.map((ex, i) => `
+    <div class="exblock">
+      <input class="exname-in" list="exNames" placeholder="Übung, z. B. Bankdrücken"
+             value="${esc(String(ex.name || ""))}" oninput="exNameInput(${i}, this)">
+      <p class="hint lasthint" id="last-${i}">${lastTimeText(ex.name)}</p>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${ex.sets.map((s, j) => `
+          <div class="setrow">
+            <span class="sn">Satz ${j + 1}</span>
+            <input class="in-reps" type="number" min="0" max="500" inputmode="numeric" placeholder="Wdh." value="${s.reps || ""}">
+            <input class="in-kg" type="number" step="0.5" min="0" max="1000" inputmode="decimal" placeholder="kg" value="${s.kg || ""}">
+          </div>`).join("")}
+      </div>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="minibtn" onclick="addSet(${i})">＋ Satz</button>
+        <button type="button" class="minibtn danger" onclick="delExercise(${i})">Übung entfernen</button>
+      </div>
+    </div>`).join("");
+}
+function exNameInput(i, input) {
+  twDraft.exercises[i].name = input.value.trim();
+  document.getElementById("last-" + i).innerHTML = lastTimeText(input.value.trim());
+}
+function lastTimeText(name) {
+  if (!name) return "";
+  const n = name.toLowerCase();
+  for (let i = state.workouts.length - 1; i >= 0; i--) {
+    const w = state.workouts[i];
+    if (w.date === todayKey()) continue;
+    const ex = (w.exercises || []).find(e => e.name.toLowerCase() === n);
+    if (ex && ex.sets.length) {
+      const s = ex.sets.map(x => `${fmtNum(x.kg, x.kg % 1 ? 1 : 0)} kg × ${x.reps}`).join(", ");
+      return `Letztes Mal (${fmtDate(w.date)}): ${s}`;
+    }
+  }
+  return "";
+}
+function saveWorkout() {
+  syncDraft();
+  const min = parseInt(document.getElementById("twMin").value, 10) || 0;
+  const kcal = parseInt(document.getElementById("twKcal").value, 10) || 0;
+  const exercises = twDraft.exercises
+    .map(ex => ({ name: ex.name, sets: ex.sets.filter(s => s.reps > 0 || s.kg > 0) }))
+    .filter(ex => ex.name && ex.sets.length);
+  if (!min && !exercises.length) {
+    alert("Bitte mindestens Dauer oder eine Übung eintragen.");
+    return;
+  }
+  const t = WORKOUT_TYPES[twDraft.type];
+  const id = uid();
+  state.workouts.push({ id, date: todayKey(), type: twDraft.type, min, kcal, exercises });
+  if (kcal > 0) {
+    state.activities.push({ id, date: todayKey(), name: `${t.ico} ${t.label} (${min} min)`, kcal });
+  }
+  save(); closeSheet("trainSheet"); renderHeute();
+  if (!document.getElementById("tab-training").hidden) renderTraining();
+}
+function delWorkout(id) {
+  if (!confirm("Diese Trainings-Einheit löschen?")) return;
+  state.workouts = state.workouts.filter(w => w.id !== id);
+  state.activities = state.activities.filter(a => a.id !== id);
+  save(); renderTraining(); renderHeute();
+}
+function renderTraining() {
+  const key = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  const now = new Date();
+  const last7 = [], last28 = [];
+  for (let i = 27; i >= 0; i--) {
+    const d = new Date(); d.setDate(now.getDate() - i);
+    last28.push(key(d));
+    if (i < 7) last7.push(key(d));
+  }
+  const week = state.workouts.filter(w => last7.includes(w.date)).length;
+  const month = state.workouts.filter(w => last28.includes(w.date)).length;
+  document.getElementById("twStats").innerHTML = `
+    <div class="stat"><div class="label">Diese Woche</div><div class="value hero">${week}</div><div class="sub">Einheiten (7 Tage)</div></div>
+    <div class="stat"><div class="label">4 Wochen</div><div class="value">${month}</div><div class="sub">Einheiten</div></div>
+    <div class="stat"><div class="label">Gesamt</div><div class="value">${state.workouts.length}</div><div class="sub">seit Start</div></div>`;
+
+  const byDate = {};
+  state.workouts.forEach(w => { if (!byDate[w.date]) byDate[w.date] = w.type; });
+  document.getElementById("dotGrid").innerHTML = last28.map(k =>
+    `<span class="${byDate[k] ? "t-" + byDate[k] : ""}" title="${fmtDate(k)}"></span>`).join("");
+
+  const list = [...state.workouts].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 30);
+  document.getElementById("workoutEmpty").hidden = list.length > 0;
+  document.getElementById("workoutList").innerHTML = list.map(w => {
+    const t = WORKOUT_TYPES[w.type] || WORKOUT_TYPES.sonst;
+    const exHtml = (w.exercises || []).map(ex =>
+      `<div class="woex"><div class="exname">${esc(ex.name)}</div>
+        <div class="exsets">${ex.sets.map(s => `${fmtNum(s.kg, s.kg % 1 ? 1 : 0)} kg × ${s.reps}`).join(" · ")}</div></div>`).join("");
+    return `<div class="card">
+      <div class="wohead">
+        <span class="woico">${t.ico}</span>
+        <div class="wotitle"><b>${t.label}</b>
+          <span>${fmtDate(w.date, { weekday: "short", day: "2-digit", month: "2-digit" })}${w.min ? " · " + w.min + " min" : ""}${w.kcal ? " · " + fmtNum(w.kcal) + " kcal" : ""}</span></div>
+        <button class="del" style="appearance:none;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:19px;padding:10px 12px;border-radius:10px" aria-label="Einheit löschen" onclick="delWorkout('${w.id}')">×</button>
+      </div>
+      ${exHtml}</div>`;
+  }).join("");
 }
 function addWeight(ev) {
   ev.preventDefault();
@@ -869,11 +1087,6 @@ function renderProfil() {
 }
 
 /* ══════════════ Heute rendern ══════════════ */
-/* Netto-MET-Werte: Compendium of Physical Activities (Ainsworth 2011) */
-const MET_PRESETS = [
-  ["Gehen", 3.5], ["Zügiges Gehen", 4.3], ["Joggen", 7.0],
-  ["Radfahren", 6.8], ["Krafttraining", 3.5], ["Schwimmen", 6.0], ["HIIT", 8.0]
-];
 const RING_C = 2 * Math.PI * 97; // Umfang des Rings
 
 function renderHeute() {
@@ -917,15 +1130,6 @@ function renderHeute() {
     ? items.join("")
     : `<p class="empty">Noch nichts eingetragen — tippe oben auf ＋.</p>`;
 
-  /* Trainings-Presets im Sheet */
-  const w = currentWeight();
-  document.getElementById("actPresets").innerHTML = w
-    ? MET_PRESETS.map(([n, met]) => {
-        const kcal = Math.round((met - 1) * 3.5 * w / 200 * 30);
-        return `<button type="button" onclick="presetActivity('${n}',${kcal})">${n} · ${kcal}</button>`;
-      }).join("")
-    : "";
-
   /* Gewicht */
   const todayW = state.weights.find(e => e.date === key);
   document.getElementById("weightHint").textContent = todayW
@@ -947,11 +1151,14 @@ function renderHeute() {
   badge.textContent = "🔥 " + streak + " Tage";
 }
 
+/* Hinweis: kcal-Berechnung fürs Training siehe WORKOUT_TYPES (Netto-MET). */
+
 /* ── Streak: Tage in Folge mit mindestens einem Eintrag ── */
 function computeStreak() {
   const tracked = new Set();
   state.meals.forEach(m => tracked.add(m.date));
   state.activities.forEach(a => tracked.add(a.date));
+  state.workouts.forEach(w => tracked.add(w.date));
   state.weights.forEach(w => tracked.add(w.date));
   Object.keys(state.water).forEach(k => { if (state.water[k] > 0) tracked.add(k); });
   const key = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");

@@ -1,3 +1,6 @@
 discord.py>=2.3
 requests>=2.31
 python-dotenv>=1.0
+# Für das Chart-Bild bei /verlauf im Wandel-Bot. Falls dein Hosting damit
+# Probleme macht: Zeile entfernen — der Bot läuft dann mit Text-Verlauf.
+matplotlib>=3.8

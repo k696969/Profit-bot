@@ -324,6 +324,31 @@
   .dotgrid span.t-cardio { background: var(--series-1); border-color: var(--series-1); }
   .dotgrid span.t-sonst { background: var(--muted); border-color: var(--muted); }
   .dotlegend { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 3px 0 10px; vertical-align: baseline; }
+  /* ── Tages-Checkliste ── */
+  ul.cl-list { list-style: none; margin: 0; padding: 0; }
+  ul.cl-list li { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); min-height: 54px; }
+  ul.cl-list li:first-child { border-top: none; }
+  .cl-check {
+    width: 27px; height: 27px; border-radius: 9px; border: 2px solid var(--line); flex: none;
+    display: flex; align-items: center; justify-content: center; color: #fff; font-size: 15px; font-weight: 800;
+  }
+  li.cl-done .cl-check { background: var(--accent); border-color: var(--accent); }
+  .cl-name { flex: 1; min-width: 0; font-weight: 550; }
+  .cl-name .cl-sub { display: block; font-size: 12px; color: var(--muted); font-weight: 400; }
+  li.cl-done .cl-name { color: var(--ink-2); }
+  .cl-row-btn { flex: 1; display: flex; align-items: center; gap: 12px; min-width: 0; appearance: none; background: none; border: none; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+  .cl-count { display: flex; align-items: center; gap: 8px; }
+  .cl-count b { font-variant-numeric: tabular-nums; min-width: 38px; text-align: center; font-size: 16px; }
+  .cntbtn {
+    appearance: none; border: none; cursor: pointer; font: inherit; font-weight: 800; font-size: 18px;
+    width: 42px; height: 42px; border-radius: 11px; background: var(--accent-wash); color: var(--accent-deep);
+  }
+  .cl-steps input { width: 104px; min-height: 42px; padding: 8px 10px; }
+  .cl-del {
+    appearance: none; border: none; background: var(--over-wash); color: var(--over); cursor: pointer;
+    font-size: 16px; width: 42px; height: 42px; border-radius: 11px;
+  }
+
   .wohead { display: flex; align-items: center; gap: 10px; }
   .wohead .woico { font-size: 21px; }
   .wohead .wotitle { flex: 1; min-width: 0; }
@@ -392,6 +417,15 @@
           </div>
         </div>
         <p class="hint" id="waterHint"></p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 id="clHead">Tages-Checkliste</h2>
+      <ul class="cl-list" id="clList"></ul>
+      <div style="display:flex;gap:16px;margin-top:8px">
+        <button type="button" class="linkbtn" onclick="addCheckItem()">＋ Eigener Punkt</button>
+        <button type="button" class="linkbtn" id="clEditBtn" onclick="toggleClEdit()">Bearbeiten</button>
       </div>
     </div>
 
@@ -476,6 +510,8 @@
             <input id="pHeight" type="number" min="120" max="230" required inputmode="numeric"></div>
           <div class="field"><label for="pWeight">Aktuelles Gewicht (kg)</label>
             <input id="pWeight" type="number" step="0.1" min="30" max="400" required inputmode="decimal"></div>
+          <div class="field"><label for="pBodyfat">Körperfett % (optional → genauere Formel)</label>
+            <input id="pBodyfat" type="number" step="0.5" min="4" max="60" inputmode="decimal" placeholder="z. B. 25 — leer lassen wenn unbekannt"></div>
           <div class="field"><label for="pActivity">Alltags-Aktivität (ohne Training)</label>
             <select id="pActivity">
               <option value="1.2">Sitzend, kaum Bewegung</option>
@@ -525,12 +561,13 @@
     <div class="card">
       <h2>Wissenschaftliche Grundlagen</h2>
       <ul class="sources">
-        <li><b>Grundumsatz:</b> Mifflin-St-Jeor-Formel (<a href="https://pubmed.ncbi.nlm.nih.gov/2305711/" target="_blank" rel="noopener">Mifflin 1990</a>) — laut systematischem Review die genaueste Schätzformel (<a href="https://pubmed.ncbi.nlm.nih.gov/15883556/" target="_blank" rel="noopener">Frankenfield 2005</a>).</li>
+        <li><b>Grundumsatz:</b> Mifflin-St-Jeor-Formel (<a href="https://pubmed.ncbi.nlm.nih.gov/2305711/" target="_blank" rel="noopener">Mifflin 1990</a>) — laut systematischem Review die genaueste Allgemein-Formel (<a href="https://pubmed.ncbi.nlm.nih.gov/15883556/" target="_blank" rel="noopener">Frankenfield 2005</a>). Trägst du deinen Körperfettanteil ein, rechnet die App stattdessen mit der fettfreien Masse (Katch-McArdle) — bei schlanken/trainierten Personen treffsicherer (<a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10687135/" target="_blank" rel="noopener">Systematisches Review 2023</a>).</li>
         <li><b>Tempo:</b> 0,5–1 kg/Woche nach <a href="https://www.cdc.gov/healthy-weight-growth/losing-weight/index.html" target="_blank" rel="noopener">CDC</a> &amp; <a href="https://www.nhs.uk/better-health/lose-weight/" target="_blank" rel="noopener">NHS</a> — langsamer hält besser.</li>
         <li><b>Defizit:</b> ≈ 7 700 kcal/kg ist eine Näherung und überschätzt langfristig (<a href="https://pubmed.ncbi.nlm.nih.gov/21872751/" target="_blank" rel="noopener">Hall 2011, The Lancet</a>) — die Prognose nutzt deshalb deinen echten Trend.</li>
         <li><b>Protein:</b> Nutzen steigt bis ~1,6 g/kg/Tag (<a href="https://pubmed.ncbi.nlm.nih.gov/28698222/" target="_blank" rel="noopener">Morton 2018</a>); im Defizit mit Krafttraining mehr (<a href="https://pubmed.ncbi.nlm.nih.gov/24092765/" target="_blank" rel="noopener">Helms 2014</a>). Bezogen aufs Zielgewicht.</li>
         <li><b>Wasser:</b> 2,5 l/Tag (M) bzw. 2,0 l/Tag (F) Gesamtwasser, ~80 % aus Getränken (<a href="https://efsa.onlinelibrary.wiley.com/doi/10.2903/j.efsa.2010.1459" target="_blank" rel="noopener">EFSA 2010</a>).</li>
-        <li><b>Training:</b> Netto-METs aus dem Compendium of Physical Activities (<a href="https://pubmed.ncbi.nlm.nih.gov/21681120/" target="_blank" rel="noopener">Ainsworth 2011</a>).</li>
+        <li><b>Training:</b> Netto-METs aus dem Compendium of Physical Activities (<a href="https://pubmed.ncbi.nlm.nih.gov/21681120/" target="_blank" rel="noopener">Ainsworth 2011</a>) mit Intensitätsstufen (z. B. Krafttraining 2,8/3,5/6,0 · Kampfsport 5,3–10,3). Netto = ohne Grundumsatz, damit nichts doppelt zählt.</li>
+        <li><b>Schritte:</b> Meta-Analyse über 15 Kohorten (47 471 Personen): Das Sterberisiko sinkt mit der Schrittzahl, der Nutzen flacht bei Unter-60-Jährigen ab ~8 000–10 000 Schritten ab (<a href="https://pubmed.ncbi.nlm.nih.gov/35247352/" target="_blank" rel="noopener">Paluch 2022, The Lancet Public Health</a>). Schritte werden bewusst <i>nicht</i> als extra kcal gutgeschrieben — Alltagsbewegung steckt schon in deinem Aktivitätsfaktor (sonst Doppelzählung).</li>
         <li><b>Tägliches Wiegen:</b> mit mehr Gewichtsverlust verbunden, ohne negative psychische Effekte (<a href="https://pubmed.ncbi.nlm.nih.gov/25521523/" target="_blank" rel="noopener">Zheng 2015</a>).</li>
       </ul>
     </div>
@@ -580,6 +617,7 @@
     <h3>Training eintragen</h3>
     <div style="display:flex;flex-direction:column;gap:10px">
       <div class="chips" id="twType"></div>
+      <div class="chips" id="twInt"></div>
       <div class="row2">
         <div class="field"><label for="twMin">Dauer (min)</label>
           <input id="twMin" type="number" value="60" min="1" max="600" inputmode="numeric" oninput="twAutoKcal()"></div>
@@ -633,16 +671,23 @@
 "use strict";
 /* ══════════════ Daten & Persistenz ══════════════ */
 const STORE_KEY = "wandel-tracker-v1";
-const DEFAULT_STATE = { profile: null, weights: [], meals: [], activities: [], water: {}, favorites: [], workouts: [] };
+const DEFAULT_CHECKITEMS = [
+  { id: "supp", name: "Supplements genommen", type: "check" },
+  { id: "gebet", name: "Gebete", type: "count", target: 5 },
+  { id: "steps", name: "Schritte", type: "steps", target: 10000 }
+];
+const DEFAULT_STATE = { profile: null, weights: [], meals: [], activities: [], water: {}, favorites: [], workouts: [], checkItems: DEFAULT_CHECKITEMS, checks: {} };
 let state = load();
 
 function load() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
     if (raw) {
-      const s = Object.assign({}, DEFAULT_STATE, JSON.parse(raw));
+      const s = Object.assign({}, JSON.parse(JSON.stringify(DEFAULT_STATE)), JSON.parse(raw));
       if (!Array.isArray(s.favorites)) s.favorites = [];
       if (!Array.isArray(s.workouts)) s.workouts = [];
+      if (!Array.isArray(s.checkItems)) s.checkItems = JSON.parse(JSON.stringify(DEFAULT_CHECKITEMS));
+      if (!s.checks || typeof s.checks !== "object") s.checks = {};
       return s;
     }
   } catch (e) { /* beschädigte Daten → frisch starten */ }
@@ -673,9 +718,20 @@ function calc() {
   const p = state.profile;
   if (!p) return null;
   const w = currentWeight();
-  const bmr = p.sex === "m"
-    ? 10 * w + 6.25 * p.height - 5 * p.age + 5
-    : 10 * w + 6.25 * p.height - 5 * p.age - 161;
+  /* Mit bekanntem Körperfett: Katch-McArdle (FFM-basiert) — bei schlanken/
+     trainierten Personen genauer als gewichtsbasierte Formeln. Sonst
+     Mifflin-St Jeor (Frankenfield 2005: beste Allgemein-Formel). */
+  let bmr, formula;
+  if (p.bodyfat) {
+    const ffm = w * (1 - p.bodyfat / 100);
+    bmr = 370 + 21.6 * ffm;
+    formula = "Katch-McArdle, " + fmtNum(p.bodyfat, 1) + " % KF";
+  } else {
+    bmr = p.sex === "m"
+      ? 10 * w + 6.25 * p.height - 5 * p.age + 5
+      : 10 * w + 6.25 * p.height - 5 * p.age - 161;
+    formula = "Mifflin-St Jeor";
+  }
   const tdee = bmr * p.activity;
   const deficit = p.rate * 7700 / 7;
   const minKcal = p.sex === "m" ? 1500 : 1200;
@@ -685,6 +741,7 @@ function calc() {
   const waterLiters = p.sex === "m" ? 2.0 : 1.6;
   return {
     weight: w,
+    formula,
     bmr: Math.round(bmr),
     tdee: Math.round(tdee),
     deficit: Math.round(deficit),
@@ -846,21 +903,23 @@ function removeEntry(list, id) {
 }
 
 /* ══════════════ Trainings-Tagebuch ══════════════ */
-/* Netto-METs: Compendium of Physical Activities (Ainsworth 2011).
-   Kampfsport: bewusst konservatives Mittel aus 10,3 (moderates Tempo) und
-   5,3 (lockeres Tempo), weil echte Einheiten Pausen enthalten — Verbrauch
-   lieber unterschätzen als überschätzen. Der kcal-Wert bleibt anpassbar. */
+/* Netto-METs nach Intensität: Compendium of Physical Activities (Ainsworth 2011).
+   Kraft: 2,8 leicht / 3,5 moderat (8–15 Wdh.) / 6,0 intensiv (Code 02050/02054).
+   Kampfsport: 5,3 lockeres Tempo / 10,3 moderates Tempo (Code 15430); „Moderat"
+   hier als 7,5-Mittel, weil echte Einheiten Pausen enthalten — lieber den
+   Verbrauch unterschätzen. Der kcal-Wert bleibt immer anpassbar. */
 const WORKOUT_TYPES = {
-  kraft:  { label: "Kraftsport", ico: "🏋️", met: 3.5 },
-  kampf:  { label: "Kampfsport", ico: "🥊", met: 7.5 },
-  cardio: { label: "Cardio",     ico: "🏃", met: 7.0 },
-  sonst:  { label: "Sonstiges",  ico: "✨", met: 5.0 }
+  kraft:  { label: "Kraftsport", ico: "🏋️", mets: { locker: 2.8, moderat: 3.5, hart: 6.0 } },
+  kampf:  { label: "Kampfsport", ico: "🥊", mets: { locker: 5.3, moderat: 7.5, hart: 10.3 } },
+  cardio: { label: "Cardio",     ico: "🏃", mets: { locker: 4.5, moderat: 7.0, hart: 10.0 } },
+  sonst:  { label: "Sonstiges",  ico: "✨", mets: { locker: 3.5, moderat: 5.0, hart: 7.0 } }
 };
-let twDraft = { type: "kraft", exercises: [] };
+const WORKOUT_INT = { locker: "Locker", moderat: "Moderat", hart: "Intensiv" };
+let twDraft = { type: "kraft", intensity: "moderat", exercises: [] };
 let twKcalTouched = false;
 
 function initWorkoutSheet() {
-  twDraft = { type: "kraft", exercises: [] };
+  twDraft = { type: "kraft", intensity: "moderat", exercises: [] };
   twKcalTouched = false;
   document.getElementById("twMin").value = 60;
   document.getElementById("exList").innerHTML = "";
@@ -870,9 +929,16 @@ function initWorkoutSheet() {
 function renderTwType() {
   document.getElementById("twType").innerHTML = Object.entries(WORKOUT_TYPES).map(([k, t]) =>
     `<button type="button" class="${twDraft.type === k ? "sel" : ""}" onclick="setTwType('${k}')">${t.ico} ${t.label}</button>`).join("");
+  document.getElementById("twInt").innerHTML = Object.entries(WORKOUT_INT).map(([k, label]) =>
+    `<button type="button" class="${twDraft.intensity === k ? "sel" : ""}" onclick="setTwInt('${k}')">${label}</button>`).join("");
 }
 function setTwType(k) {
   twDraft.type = k;
+  renderTwType();
+  twAutoKcal();
+}
+function setTwInt(k) {
+  twDraft.intensity = k;
   renderTwType();
   twAutoKcal();
 }
@@ -880,7 +946,7 @@ function twAutoKcal() {
   if (twKcalTouched) return;
   const w = currentWeight() || 80;
   const min = parseInt(document.getElementById("twMin").value, 10) || 0;
-  const met = WORKOUT_TYPES[twDraft.type].met;
+  const met = WORKOUT_TYPES[twDraft.type].mets[twDraft.intensity];
   document.getElementById("twKcal").value = min ? Math.round((met - 1) * 3.5 * w / 200 * min) : "";
 }
 function syncDraft() {
@@ -962,7 +1028,7 @@ function saveWorkout() {
   }
   const t = WORKOUT_TYPES[twDraft.type];
   const id = uid();
-  state.workouts.push({ id, date: todayKey(), type: twDraft.type, min, kcal, exercises });
+  state.workouts.push({ id, date: todayKey(), type: twDraft.type, intensity: twDraft.intensity, min, kcal, exercises });
   if (kcal > 0) {
     state.activities.push({ id, date: todayKey(), name: `${t.ico} ${t.label} (${min} min)`, kcal });
   }
@@ -1007,7 +1073,7 @@ function renderTraining() {
       <div class="wohead">
         <span class="woico">${t.ico}</span>
         <div class="wotitle"><b>${t.label}</b>
-          <span>${fmtDate(w.date, { weekday: "short", day: "2-digit", month: "2-digit" })}${w.min ? " · " + w.min + " min" : ""}${w.kcal ? " · " + fmtNum(w.kcal) + " kcal" : ""}</span></div>
+          <span>${fmtDate(w.date, { weekday: "short", day: "2-digit", month: "2-digit" })}${w.min ? " · " + w.min + " min" : ""}${w.intensity ? " · " + (WORKOUT_INT[w.intensity] || "") : ""}${w.kcal ? " · " + fmtNum(w.kcal) + " kcal" : ""}</span></div>
         <button class="del" style="appearance:none;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:19px;padding:10px 12px;border-radius:10px" aria-label="Einheit löschen" onclick="delWorkout('${w.id}')">×</button>
       </div>
       ${exHtml}</div>`;
@@ -1037,6 +1103,7 @@ function saveProfile(ev) {
     age: parseInt(document.getElementById("pAge").value, 10),
     height: parseInt(document.getElementById("pHeight").value, 10),
     weight: parseFloat(document.getElementById("pWeight").value.replace(",", ".")),
+    bodyfat: parseFloat(document.getElementById("pBodyfat").value.replace(",", ".")) || null,
     activity: parseFloat(document.getElementById("pActivity").value),
     goal: parseFloat(document.getElementById("pGoal").value.replace(",", ".")),
     rate: parseFloat(document.getElementById("pRate").value),
@@ -1053,6 +1120,7 @@ function fillProfileForm() {
   document.getElementById("pAge").value = p.age;
   document.getElementById("pHeight").value = p.height;
   document.getElementById("pWeight").value = p.weight;
+  document.getElementById("pBodyfat").value = p.bodyfat || "";
   document.getElementById("pActivity").value = String(p.activity);
   document.getElementById("pGoal").value = p.goal;
   document.getElementById("pRate").value = String(p.rate);
@@ -1068,7 +1136,7 @@ function renderProfil() {
   if (!c) { card.hidden = true; return; }
   card.hidden = false;
   const rows = [
-    ["Grundumsatz (Mifflin-St Jeor)", fmtNum(c.bmr) + " kcal"],
+    ["Grundumsatz (" + c.formula + ")", fmtNum(c.bmr) + " kcal"],
     ["Gesamtumsatz (× Aktivität)", fmtNum(c.tdee) + " kcal"],
     ["Geplantes Defizit", "−" + fmtNum(c.deficit) + " kcal"],
     ["Dein Tagesziel", fmtNum(c.target) + " kcal"],
@@ -1144,11 +1212,81 @@ function renderHeute() {
   document.getElementById("waterHint").textContent =
     `${fmtNum(glasses * 0.25, 2)} von ${fmtNum(goal * 0.25, 2)} l`;
 
+  /* Checkliste */
+  renderChecklist();
+
   /* Streak */
   const streak = computeStreak();
   const badge = document.getElementById("streakBadge");
   badge.hidden = streak < 2;
   badge.textContent = "🔥 " + streak + " Tage";
+}
+
+/* ══════════════ Tages-Checkliste ══════════════ */
+let clEdit = false;
+function clDay() { return state.checks[todayKey()] || {}; }
+function clItemDone(it, v) {
+  if (it.type === "check") return !!v;
+  return (v || 0) >= (it.target || 1);
+}
+function renderChecklist() {
+  const day = clDay();
+  let done = 0;
+  const rows = state.checkItems.map(it => {
+    const v = day[it.id];
+    const isDone = clItemDone(it, v);
+    if (isDone) done++;
+    let control = "";
+    let sub = "";
+    if (it.type === "count") {
+      control = `<span class="cl-count">
+        <button type="button" class="cntbtn" onclick="clCount('${it.id}',-1)" aria-label="minus">−</button>
+        <b>${v || 0}/${it.target}</b>
+        <button type="button" class="cntbtn" onclick="clCount('${it.id}',1)" aria-label="plus">＋</button></span>`;
+    } else if (it.type === "steps") {
+      sub = `<span class="cl-sub">Ziel ${fmtNum(it.target)} — Nutzen steigt laut Studien bis ~8–10 Tsd.</span>`;
+      control = `<span class="cl-steps"><input type="number" min="0" max="100000" inputmode="numeric"
+        placeholder="0" value="${v || ""}" onchange="clSteps('${it.id}', this)" aria-label="Schritte heute"></span>`;
+    }
+    const del = clEdit ? `<button type="button" class="cl-del" aria-label="Punkt löschen" onclick="delCheckItem('${it.id}')">✕</button>` : "";
+    const nameHtml = `<span class="cl-name">${esc(it.name)}${it.type === "steps" && (v || 0) > 0 ? `<span class="cl-sub">${fmtNum(v)} Schritte</span>` : sub}</span>`;
+    const box = `<span class="cl-check">${isDone ? "✓" : ""}</span>`;
+    const left = it.type === "check"
+      ? `<button type="button" class="cl-row-btn" onclick="clToggle('${it.id}')">${box}${nameHtml}</button>`
+      : `${box}${nameHtml}`;
+    return `<li class="${isDone ? "cl-done" : ""}">${left}${control}${del}</li>`;
+  });
+  document.getElementById("clList").innerHTML = rows.join("") ||
+    `<p class="empty">Keine Punkte — füge unten eigene hinzu.</p>`;
+  document.getElementById("clHead").textContent =
+    `Tages-Checkliste · ${done}/${state.checkItems.length}`;
+  document.getElementById("clEditBtn").textContent = clEdit ? "Fertig" : "Bearbeiten";
+}
+function clSetVal(id, v) {
+  const k = todayKey();
+  if (!state.checks[k]) state.checks[k] = {};
+  state.checks[k][id] = v;
+  save(); renderHeute();
+}
+function clToggle(id) { clSetVal(id, !clDay()[id]); }
+function clCount(id, delta) {
+  const it = state.checkItems.find(x => x.id === id);
+  const v = Math.max(0, Math.min(it.target || 99, (clDay()[id] || 0) + delta));
+  clSetVal(id, v);
+}
+function clSteps(id, input) {
+  clSetVal(id, Math.max(0, parseInt(input.value, 10) || 0));
+}
+function addCheckItem() {
+  const name = prompt("Name des Punkts (z. B. Kreatin, Lesen, kein Zucker):");
+  if (!name || !name.trim()) return;
+  state.checkItems.push({ id: uid(), name: name.trim(), type: "check" });
+  save(); renderChecklist();
+}
+function toggleClEdit() { clEdit = !clEdit; renderChecklist(); }
+function delCheckItem(id) {
+  state.checkItems = state.checkItems.filter(x => x.id !== id);
+  save(); renderChecklist();
 }
 
 /* Hinweis: kcal-Berechnung fürs Training siehe WORKOUT_TYPES (Netto-MET). */
@@ -1161,6 +1299,9 @@ function computeStreak() {
   state.workouts.forEach(w => tracked.add(w.date));
   state.weights.forEach(w => tracked.add(w.date));
   Object.keys(state.water).forEach(k => { if (state.water[k] > 0) tracked.add(k); });
+  Object.keys(state.checks).forEach(k => {
+    if (Object.values(state.checks[k] || {}).some(v => v)) tracked.add(k);
+  });
   const key = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   const d = new Date();
   if (!tracked.has(key(d))) d.setDate(d.getDate() - 1); // heute noch leer → Serie zählt ab gestern weiter
@@ -1227,6 +1368,14 @@ function renderWeekReport() {
     ["Gewicht diese Woche", wDelta != null ? (wDelta <= 0 ? "−" : "+") + fmtNum(Math.abs(wDelta), 1) + " kg" : "–"],
     ["Streak", computeStreak() + " Tage in Folge"]
   ];
+  if (state.checkItems.length) {
+    let clDone = 0, clTotal = 0;
+    keys.forEach(k => {
+      const day = state.checks[k] || {};
+      state.checkItems.forEach(it => { clTotal++; if (clItemDone(it, day[it.id])) clDone++; });
+    });
+    rows.push(["Checkliste erfüllt", Math.round(clDone / clTotal * 100) + " %"]);
+  }
   document.getElementById("weekSummary").innerHTML =
     rows.map(([k, v]) => `<div class="item"><span>${k}</span><b>${v}</b></div>`).join("");
 }

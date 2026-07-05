@@ -13,62 +13,81 @@
 <link rel="icon" href="icon-192.png">
 <style>
   :root {
-    --page: #f4f6f4;
+    --page: #f4f5fa;
     --surface: #ffffff;
-    --ink: #10150f;
-    --ink-2: #59605a;
-    --muted: #8b918b;
-    --line: #e6e9e5;
-    --hairline: rgba(16, 21, 15, 0.07);
-    --accent: #1e6f5c;
-    --accent-deep: #14523f;
-    --accent-wash: #e2efe9;
-    --good-text: #006300;
-    --over: #d03b3b;
-    --over-wash: #fbecec;
-    --series-1: #2a78d6;
-    --grid: #e6e9e5;
-    --btn-alt: #10150f;
-    --nav-bg: rgba(255, 255, 255, 0.92);
-    --tip-bg: #10150f;
-    --streak-bg: #fdf1e8;
-    --streak-ink: #b45309;
-    --warn-bg: #fdf1e8;
-    --warn-ink: #8a4a1f;
+    --ink: #1b1c24;
+    --ink-2: #5b5e6d;
+    --muted: #9095a5;
+    --line: #e9eaf2;
+    --hairline: rgba(27, 28, 36, 0.06);
+    --accent: #10b981;
+    --accent-deep: #087f5b;
+    --accent-wash: #e5f8f0;
+    --good-text: #0a8754;
+    --over: #ef4444;
+    --over-wash: #feecec;
+    --series-1: #2fb5f3;
+    --grid: #ecedf4;
+    --btn-alt: #1b1c24;
+    --nav-bg: rgba(255, 255, 255, 0.94);
+    --tip-bg: #23242e;
+    --streak-bg: #fff1da;
+    --streak-ink: #c2700a;
+    --warn-bg: #fff3e0;
+    --warn-ink: #9a5b16;
+    /* Kategorie-Farben (bunt & lebendig) */
+    --c-kcal: #ff7a3d; --w-kcal: #ffeee3;
+    --c-train: #f43f5e; --w-train: #ffe8ed;
+    --c-protein: #8b5cf6; --w-protein: #f2ecff;
+    --c-water: #2fb5f3; --w-water: #e3f5fe;
+    --c-weight: #10b981; --w-weight: #e5f8f0;
+    --c-check: #f5a623; --w-check: #fff3da;
+    --c-steps: #22c55e;
+    --grad-brand: linear-gradient(135deg, #2dd4a0, #0ca5a5);
+    --grad-food: linear-gradient(135deg, #ffb457, #ff5e7d);
+    --grad-train: linear-gradient(135deg, #fb7185, #f97316);
     --nav-h: 66px;
   }
   /* ── Dark Mode: folgt dem System, data-theme (z. B. Claude-Viewer) gewinnt ── */
   @media (prefers-color-scheme: dark) {
     :root {
-      --page: #0f1211; --surface: #181c19; --ink: #eef1ed; --ink-2: #aeb6ae;
-      --muted: #7e857e; --line: #272c27; --hairline: rgba(255, 255, 255, 0.07);
-      --accent: #22826b; --accent-deep: #74cfb4; --accent-wash: #1b332b;
-      --good-text: #4cba71; --over: #e66767; --over-wash: #3a2020;
-      --series-1: #3987e5; --grid: #272c27;
-      --btn-alt: #2c322d; --nav-bg: rgba(24, 28, 25, 0.92); --tip-bg: #000000;
-      --streak-bg: #3a2c14; --streak-ink: #f5b866;
-      --warn-bg: #3a2c14; --warn-ink: #f0c493;
+      --page: #0f1015; --surface: #191a22; --ink: #eef0f4; --ink-2: #b0b4c0;
+      --muted: #7d8290; --line: #262834; --hairline: rgba(255, 255, 255, 0.07);
+      --accent: #17c78f; --accent-deep: #7ef0c8; --accent-wash: #14332a;
+      --good-text: #4ade80; --over: #f87171; --over-wash: #3a2020;
+      --series-1: #38bdf8; --grid: #262834;
+      --btn-alt: #2b2d3a; --nav-bg: rgba(25, 26, 34, 0.92); --tip-bg: #000000;
+      --streak-bg: #3a2c12; --streak-ink: #f5b866;
+      --warn-bg: #3a2c12; --warn-ink: #f0c493;
+      --w-kcal: rgba(255, 122, 61, 0.16); --w-train: rgba(244, 63, 94, 0.16);
+      --w-protein: rgba(139, 92, 246, 0.18); --w-water: rgba(47, 181, 243, 0.16);
+      --w-weight: rgba(16, 185, 129, 0.16); --w-check: rgba(245, 166, 35, 0.16);
     }
   }
   :root[data-theme="dark"] {
-    --page: #0f1211; --surface: #181c19; --ink: #eef1ed; --ink-2: #aeb6ae;
-    --muted: #7e857e; --line: #272c27; --hairline: rgba(255, 255, 255, 0.07);
-    --accent: #22826b; --accent-deep: #74cfb4; --accent-wash: #1b332b;
-    --good-text: #4cba71; --over: #e66767; --over-wash: #3a2020;
-    --series-1: #3987e5; --grid: #272c27;
-    --btn-alt: #2c322d; --nav-bg: rgba(24, 28, 25, 0.92); --tip-bg: #000000;
-    --streak-bg: #3a2c14; --streak-ink: #f5b866;
-    --warn-bg: #3a2c14; --warn-ink: #f0c493;
+    --page: #0f1015; --surface: #191a22; --ink: #eef0f4; --ink-2: #b0b4c0;
+    --muted: #7d8290; --line: #262834; --hairline: rgba(255, 255, 255, 0.07);
+    --accent: #17c78f; --accent-deep: #7ef0c8; --accent-wash: #14332a;
+    --good-text: #4ade80; --over: #f87171; --over-wash: #3a2020;
+    --series-1: #38bdf8; --grid: #262834;
+    --btn-alt: #2b2d3a; --nav-bg: rgba(25, 26, 34, 0.92); --tip-bg: #000000;
+    --streak-bg: #3a2c12; --streak-ink: #f5b866;
+    --warn-bg: #3a2c12; --warn-ink: #f0c493;
+    --w-kcal: rgba(255, 122, 61, 0.16); --w-train: rgba(244, 63, 94, 0.16);
+    --w-protein: rgba(139, 92, 246, 0.18); --w-water: rgba(47, 181, 243, 0.16);
+    --w-weight: rgba(16, 185, 129, 0.16); --w-check: rgba(245, 166, 35, 0.16);
   }
   :root[data-theme="light"] {
-    --page: #f4f6f4; --surface: #ffffff; --ink: #10150f; --ink-2: #59605a;
-    --muted: #8b918b; --line: #e6e9e5; --hairline: rgba(16, 21, 15, 0.07);
-    --accent: #1e6f5c; --accent-deep: #14523f; --accent-wash: #e2efe9;
-    --good-text: #006300; --over: #d03b3b; --over-wash: #fbecec;
-    --series-1: #2a78d6; --grid: #e6e9e5;
-    --btn-alt: #10150f; --nav-bg: rgba(255, 255, 255, 0.92); --tip-bg: #10150f;
-    --streak-bg: #fdf1e8; --streak-ink: #b45309;
-    --warn-bg: #fdf1e8; --warn-ink: #8a4a1f;
+    --page: #f4f5fa; --surface: #ffffff; --ink: #1b1c24; --ink-2: #5b5e6d;
+    --muted: #9095a5; --line: #e9eaf2; --hairline: rgba(27, 28, 36, 0.06);
+    --accent: #10b981; --accent-deep: #087f5b; --accent-wash: #e5f8f0;
+    --good-text: #0a8754; --over: #ef4444; --over-wash: #feecec;
+    --series-1: #2fb5f3; --grid: #ecedf4;
+    --btn-alt: #1b1c24; --nav-bg: rgba(255, 255, 255, 0.94); --tip-bg: #23242e;
+    --streak-bg: #fff1da; --streak-ink: #c2700a;
+    --warn-bg: #fff3e0; --warn-ink: #9a5b16;
+    --w-kcal: #ffeee3; --w-train: #ffe8ed; --w-protein: #f2ecff;
+    --w-water: #e3f5fe; --w-weight: #e5f8f0; --w-check: #fff3da;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html { -webkit-text-size-adjust: 100%; }
@@ -105,8 +124,8 @@
   .ringcard { text-align: center; padding: 22px 18px 18px; }
   .ringbox { position: relative; width: 216px; height: 216px; margin: 0 auto; }
   .ringbox svg { transform: rotate(-90deg); }
-  .ring-track { stroke: var(--accent-wash); }
-  .ring-fill { stroke: var(--accent); transition: stroke-dashoffset .45s ease; }
+  .ring-track { stroke: var(--w-kcal); }
+  .ring-fill { stroke: url(#ringGrad); transition: stroke-dashoffset .45s ease; }
   .ring-fill.overring { stroke: var(--over); }
   @media (prefers-reduced-motion: reduce) { .ring-fill { transition: none; } }
   .ringcenter {
@@ -125,18 +144,22 @@
   }
   .ministat .m { display: flex; flex-direction: column; gap: 1px; }
   .ministat .k { font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
-  .ministat .v { font-size: 16.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .ministat .v { font-size: 16.5px; font-weight: 750; font-variant-numeric: tabular-nums; }
+  #msEaten { color: var(--c-kcal); }
+  #msBurn { color: var(--c-train); }
+  #msProt { color: var(--c-protein); }
   .ministat .s { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
   /* ── Schnell-Buttons ── */
   .quickrow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
   .quickrow button {
     appearance: none; border: none; cursor: pointer; font: inherit;
-    background: var(--accent); color: #fff; font-weight: 700; font-size: 16px;
+    background: var(--grad-food); color: #fff; font-weight: 750; font-size: 16px;
     border-radius: 16px; padding: 16px 10px; min-height: 54px;
+    box-shadow: 0 4px 14px rgba(255, 94, 125, 0.28);
   }
-  .quickrow button:active { background: var(--accent-deep); }
-  .quickrow button.alt { background: var(--btn-alt); }
+  .quickrow button:active { filter: brightness(0.92); }
+  .quickrow button.alt { background: var(--grad-train); box-shadow: 0 4px 14px rgba(249, 115, 22, 0.28); }
 
   /* ── Kompakt-Zeilen (Gewicht/Wasser) ── */
   .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -150,10 +173,10 @@
   input[type="number"] { font-variant-numeric: tabular-nums; }
   button.btn {
     appearance: none; font: inherit; font-weight: 700; cursor: pointer;
-    background: var(--accent); color: #fff; border: none;
+    background: var(--grad-brand); color: #fff; border: none;
     border-radius: 12px; padding: 10px 18px; min-height: 48px;
   }
-  button.btn:active { background: var(--accent-deep); }
+  button.btn:active { filter: brightness(0.92); }
   button.btn.ghost { background: var(--accent-wash); color: var(--accent-deep); }
   button.btn.danger { background: var(--over-wash); color: var(--over); }
   button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible {
@@ -165,7 +188,7 @@
     width: 16px; height: 24px; border-radius: 4px 4px 6px 6px;
     border: 1.5px solid var(--line); background: var(--page); display: inline-block;
   }
-  .waterglasses span.full { background: var(--series-1); border-color: var(--series-1); }
+  .waterglasses span.full { background: var(--c-water); border-color: var(--c-water); }
   .waterbtns { display: flex; gap: 6px; }
   .waterbtns button {
     appearance: none; border: none; cursor: pointer; font: inherit; font-weight: 800;
@@ -377,6 +400,12 @@
     <div class="card ringcard" id="ringCard">
       <div class="ringbox">
         <svg viewBox="0 0 216 216" width="216" height="216" role="img" aria-label="Kalorienbudget heute">
+          <defs>
+            <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#ffb457"/>
+              <stop offset="100%" stop-color="#ff5e7d"/>
+            </linearGradient>
+          </defs>
           <circle class="ring-track" cx="108" cy="108" r="97" fill="none" stroke-width="15"/>
           <circle class="ring-fill" id="ringFill" cx="108" cy="108" r="97" fill="none" stroke-width="15"
                   stroke-linecap="round" stroke-dasharray="609.5" stroke-dashoffset="609.5"/>
@@ -452,6 +481,26 @@
       <div class="chartbox" id="kcalChart"><div class="viz-tip"></div></div>
       <p class="empty" id="kcalChartEmpty" hidden>Noch keine Mahlzeiten eingetragen.</p>
       <p class="hint">Gestrichelte Linie = Tagesziel · rote Balken = drüber.</p>
+    </div>
+    <div class="card" id="protCard">
+      <h2 style="color:var(--c-protein)">Protein · letzte 14 Tage</h2>
+      <div class="chartbox" id="protChart"><div class="viz-tip"></div></div>
+    </div>
+    <div class="card" id="waterCard">
+      <h2 style="color:var(--c-water)">Wasser · letzte 14 Tage</h2>
+      <div class="chartbox" id="waterChart"><div class="viz-tip"></div></div>
+    </div>
+    <div class="card" id="stepsCard">
+      <h2 style="color:var(--c-steps)">Schritte · letzte 14 Tage</h2>
+      <div class="chartbox" id="stepsChart"><div class="viz-tip"></div></div>
+    </div>
+    <div class="card" id="woWeekCard">
+      <h2 style="color:var(--c-train)">Trainings pro Woche · 8 Wochen</h2>
+      <div class="chartbox" id="woWeekChart"><div class="viz-tip"></div></div>
+    </div>
+    <div class="card" id="checkCard">
+      <h2 style="color:var(--c-check)">Checkliste erfüllt · letzte 14 Tage</h2>
+      <div class="chartbox" id="checkChart"><div class="viz-tip"></div></div>
     </div>
     <div class="card">
       <h2>Letzte Gewichtseinträge</h2>
@@ -590,6 +639,14 @@
         <input id="mealName" required autocomplete="off" placeholder="Tippen zum Suchen — z. B. Hafer…">
         <div class="sugglist" id="suggList" hidden></div>
       </div>
+      <button type="button" class="minibtn" onclick="scanBarcode()">📷 Barcode scannen</button>
+      <p class="hint" style="margin:0">Die Suche findet neben Basics auch Millionen Markenprodukte (Open Food Facts, 🌐 = braucht Internet).</p>
+      <div class="row2" id="gramsRow" hidden>
+        <div class="field"><label for="mealGrams">Menge in Gramm</label>
+          <input id="mealGrams" type="number" value="100" min="1" max="3000" inputmode="numeric" oninput="gramsChanged()"></div>
+        <div class="field"><label>&nbsp;</label>
+          <p class="hint" id="per100Hint" style="margin:10px 0 0">kcal/Protein werden aus 100-g-Werten umgerechnet.</p></div>
+      </div>
       <div class="row2">
         <div class="field"><label for="mealKcal">kcal</label>
           <input id="mealKcal" type="number" min="1" max="5000" required placeholder="450" inputmode="numeric"></div>
@@ -600,6 +657,16 @@
       <button class="btn" type="submit">Hinzufügen</button>
       <button class="btn ghost" type="button" onclick="closeSheet('mealSheet')">Abbrechen</button>
     </form>
+  </div>
+</dialog>
+
+<dialog class="sheet" id="scanSheet">
+  <div class="sheet-inner">
+    <div class="sheet-grip"></div>
+    <h3>Barcode scannen</h3>
+    <video id="scanVideo" autoplay playsinline muted style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:14px;background:#000"></video>
+    <p class="hint">Richte die Kamera auf den Strichcode des Produkts …</p>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="stopScan()">Abbrechen</button>
   </div>
 </dialog>
 
@@ -820,7 +887,11 @@ function showTab(name) {
   if (name === "fotos") renderFotos();
 }
 function openSheet(id) {
-  if (id === "mealSheet") { renderFavChips(); hideSuggest(); }
+  if (id === "mealSheet") {
+    renderFavChips(); hideSuggest();
+    per100 = null;
+    document.getElementById("gramsRow").hidden = true;
+  }
   if (id === "trainSheet") initWorkoutSheet();
   document.getElementById(id).showModal();
 }
@@ -832,10 +903,16 @@ function closeSheet(id) {
 /* ══════════════ Aktionen ══════════════ */
 function addMeal(ev) {
   ev.preventDefault();
-  const name = document.getElementById("mealName").value.trim();
+  let name = document.getElementById("mealName").value.trim();
   const kcal = parseInt(document.getElementById("mealKcal").value, 10);
   const protein = parseInt(document.getElementById("mealProtein").value, 10) || 0;
   if (!name || !kcal) return;
+  if (per100) {
+    const g = parseInt(document.getElementById("mealGrams").value, 10) || 100;
+    name += " · " + g + " g";
+    per100 = null;
+    document.getElementById("gramsRow").hidden = true;
+  }
   state.meals.push({ id: uid(), date: todayKey(), name, kcal, protein });
   if (document.getElementById("mealFav").checked) {
     state.favorites = state.favorites.filter(f => f.name !== name);
@@ -873,28 +950,142 @@ function favTap(id) {
   state.meals.push({ id: uid(), date: todayKey(), name: f.name, kcal: f.kcal, protein: f.protein || 0 });
   save(); closeSheet("mealSheet"); renderHeute();
 }
+/* ── Lebensmittel-Suche: lokale Basics + Open Food Facts (Millionen Produkte) ── */
+let per100 = null;          // {kcal, prot} je 100 g, wenn ein Datenbank-Produkt gewählt wurde
+let suggLocal = [], suggOff = [], offTimer = null, offToken = 0;
+
 function hideSuggest() { document.getElementById("suggList").hidden = true; }
 function renderSuggest() {
-  const q = document.getElementById("mealName").value.trim().toLowerCase();
+  const q = document.getElementById("mealName").value.trim();
+  per100 = null;
+  document.getElementById("gramsRow").hidden = true;
+  if (q.length < 2) { suggLocal = []; suggOff = []; hideSuggest(); return; }
+  const ql = q.toLowerCase();
+  const favs = state.favorites.filter(f => f.name.toLowerCase().includes(ql))
+    .map(f => ({ label: "⭐ " + f.name, name: f.name, kcal: f.kcal, prot: f.protein || 0 }));
+  const foods = FOODS.filter(f => f[0].toLowerCase().includes(ql))
+    .map(f => ({ label: f[0], name: f[0], kcal: f[1], prot: f[2] }));
+  suggLocal = [...favs, ...foods].slice(0, 5);
+  suggOff = [];
+  paintSuggest(false);
+  clearTimeout(offTimer);
+  if (q.length >= 3) offTimer = setTimeout(() => offSearch(q), 450);
+}
+function paintSuggest(loading) {
   const list = document.getElementById("suggList");
-  if (q.length < 2) { list.hidden = true; return; }
-  const favs = state.favorites.filter(f => f.name.toLowerCase().includes(q))
-    .map(f => ["⭐ " + f.name, f.kcal, f.protein || 0, f.name]);
-  const foods = FOODS.filter(f => f[0].toLowerCase().includes(q))
-    .map(f => [f[0], f[1], f[2], f[0]]);
-  const hits = [...favs, ...foods].slice(0, 6);
-  if (!hits.length) { list.hidden = true; return; }
-  list.innerHTML = hits.map(([label, kcal, prot, name]) =>
-    `<button type="button" onclick="pickSuggest(this)" data-name="${esc(name)}" data-kcal="${kcal}" data-prot="${prot}">
-       <span class="n">${esc(label)}</span><span class="kc">${fmtNum(kcal)} kcal · ${fmtNum(prot)} g P</span>
-     </button>`).join("");
+  const all = [...suggLocal, ...suggOff];
+  if (!all.length && !loading) { list.hidden = true; return; }
+  list.innerHTML = all.map((s, i) =>
+    `<button type="button" onclick="pickSuggest(${i})">
+       <span class="n">${esc(s.label)}</span>
+       <span class="kc">${fmtNum(s.kcal)} kcal${s.per100 ? "/100 g" : ""} · ${fmtNum(s.prot, s.prot % 1 ? 1 : 0)} g P</span>
+     </button>`).join("") +
+    (loading ? `<button type="button" disabled><span class="n" style="color:var(--muted)">🌐 Suche in Open Food Facts …</span></button>` : "");
   list.hidden = false;
 }
-function pickSuggest(btn) {
-  document.getElementById("mealName").value = btn.dataset.name;
-  document.getElementById("mealKcal").value = btn.dataset.kcal;
-  document.getElementById("mealProtein").value = btn.dataset.prot;
+function offNutriments(p) {
+  if (!p || !p.nutriments) return null;
+  const kcal = p.nutriments["energy-kcal_100g"] ?? (p.nutriments.energy_100g ? p.nutriments.energy_100g / 4.184 : null);
+  if (!kcal) return null;
+  return { kcal: Math.round(kcal), prot: Math.round((p.nutriments.proteins_100g || 0) * 10) / 10 };
+}
+async function offSearch(q) {
+  const token = ++offToken;
+  paintSuggest(true);
+  try {
+    const url = "https://de.openfoodfacts.org/cgi/search.pl?search_terms=" + encodeURIComponent(q) +
+      "&search_simple=1&action=process&json=1&page_size=6&fields=product_name,brands,nutriments";
+    const res = await fetch(url);
+    const data = await res.json();
+    if (token !== offToken) return;
+    suggOff = (data.products || []).map(p => {
+      const n = offNutriments(p);
+      if (!n || !p.product_name) return null;
+      const brand = (p.brands || "").split(",")[0].trim();
+      return { label: "🌐 " + p.product_name + (brand ? " · " + brand : ""),
+               name: p.product_name + (brand ? " (" + brand + ")" : ""),
+               kcal: n.kcal, prot: n.prot, per100: true };
+    }).filter(Boolean).slice(0, 5);
+  } catch (e) { suggOff = []; /* offline oder Datenbank nicht erreichbar */ }
+  if (token === offToken) paintSuggest(false);
+}
+function pickSuggest(i) {
+  const s = [...suggLocal, ...suggOff][i];
+  if (!s) return;
+  document.getElementById("mealName").value = s.name;
+  if (s.per100) {
+    per100 = { kcal: s.kcal, prot: s.prot };
+    document.getElementById("mealGrams").value = 100;
+    document.getElementById("gramsRow").hidden = false;
+    gramsChanged();
+  } else {
+    per100 = null;
+    document.getElementById("gramsRow").hidden = true;
+    document.getElementById("mealKcal").value = s.kcal;
+    document.getElementById("mealProtein").value = Math.round(s.prot);
+  }
   hideSuggest();
+}
+function gramsChanged() {
+  if (!per100) return;
+  const g = parseInt(document.getElementById("mealGrams").value, 10) || 0;
+  document.getElementById("mealKcal").value = g ? Math.round(per100.kcal * g / 100) : "";
+  document.getElementById("mealProtein").value = g ? Math.round(per100.prot * g / 100) : "";
+}
+
+/* ── Barcode-Scanner (Kamera, sonst Nummern-Eingabe) ── */
+let scanStream = null, scanTimer = null;
+async function scanBarcode() {
+  if (!("BarcodeDetector" in window)) {
+    const code = prompt("Dein Browser kann nicht direkt scannen.\nTipp die Barcode-Nummer ein (Zahlen unter dem Strichcode):");
+    if (code && code.trim()) lookupBarcode(code.trim());
+    return;
+  }
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+  } catch (e) {
+    const code = prompt("Kein Kamera-Zugriff. Barcode-Nummer eintippen:");
+    if (code && code.trim()) lookupBarcode(code.trim());
+    return;
+  }
+  const video = document.getElementById("scanVideo");
+  video.srcObject = scanStream;
+  document.getElementById("scanSheet").showModal();
+  const detector = new BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"] });
+  scanTimer = setInterval(async () => {
+    try {
+      const codes = await detector.detect(video);
+      if (codes.length) { const c = codes[0].rawValue; stopScan(); lookupBarcode(c); }
+    } catch (e) { /* Frame noch nicht bereit */ }
+  }, 350);
+}
+function stopScan() {
+  clearInterval(scanTimer);
+  if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+  const d = document.getElementById("scanSheet");
+  if (d.open) d.close();
+}
+async function lookupBarcode(code) {
+  try {
+    const res = await fetch("https://de.openfoodfacts.org/api/v2/product/" + encodeURIComponent(code) +
+      ".json?fields=product_name,brands,nutriments");
+    const data = await res.json();
+    const p = data.product;
+    const n = offNutriments(p);
+    if (!p || !n) {
+      alert("Produkt " + code + " ist nicht in Open Food Facts — trag die Werte vom Etikett ein.");
+      return;
+    }
+    const brand = (p.brands || "").split(",")[0].trim();
+    document.getElementById("mealName").value = (p.product_name || "Produkt") + (brand ? " (" + brand + ")" : "");
+    per100 = n;
+    document.getElementById("mealGrams").value = 100;
+    document.getElementById("gramsRow").hidden = false;
+    gramsChanged();
+    hideSuggest();
+  } catch (e) {
+    alert("Keine Verbindung zur Produkt-Datenbank — Barcode braucht Internet (und funktioniert nicht in der Claude-Vorschau, nur in der installierten App).");
+  }
 }
 function removeEntry(list, id) {
   state[list] = state[list].filter(e => e.id !== id);
@@ -1335,7 +1526,99 @@ function renderVerlauf() {
   renderWeekReport();
   drawWeightChart();
   drawKcalChart();
+  drawTrends();
   renderWeightTable();
+}
+
+/* ══════════════ Trend-Charts: alles über die Zeit ══════════════ */
+function lastNDays(n) {
+  const out = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    out.push(d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"));
+  }
+  return out;
+}
+/* Generischer Balken-Chart (Karte versteckt sich, solange keine Daten da sind) */
+function drawBars(boxId, data, opts) {
+  const box = document.getElementById(boxId);
+  const card = box.closest(".card");
+  box.querySelectorAll("svg").forEach(s => s.remove());
+  if (!data.some(d => d.val > 0)) { card.hidden = true; return; }
+  card.hidden = false;
+  const o = Object.assign({ color: "var(--series-1)", unit: "", decimals: 0, labelEvery: 3, target: 0 }, opts);
+  const W = Math.max(300, box.clientWidth || 320), H = 190;
+  const M = { t: 16, r: 14, b: 24, l: 46 };
+  const yMax = Math.max(o.target * 1.15, ...data.map(d => d.val)) || 1;
+  const Y = v => M.t + (yMax - v) / yMax * (H - M.t - M.b);
+  const bandW = (W - M.l - M.r) / data.length;
+  const barW = Math.min(30, bandW - 2);
+  let g = "";
+  for (let i = 0; i <= 3; i++) {
+    const v = yMax * i / 3, y = Y(v);
+    g += `<line x1="${M.l}" x2="${W - M.r}" y1="${y}" y2="${y}" stroke="var(--grid)" stroke-width="1"/>`;
+    g += `<text x="${M.l - 7}" y="${y + 4}" text-anchor="end" font-size="11" fill="var(--muted)" style="font-variant-numeric:tabular-nums">${fmtNum(v, o.decimals)}</text>`;
+  }
+  data.forEach((d, i) => {
+    const cx = M.l + bandW * i + bandW / 2;
+    if (d.val > 0) {
+      const y = Y(d.val), h = Y(0) - y, rTop = Math.min(4, h);
+      g += `<path d="M${(cx - barW / 2).toFixed(1)} ${Y(0)} V${(y + rTop).toFixed(1)} Q${(cx - barW / 2).toFixed(1)} ${y.toFixed(1)} ${(cx - barW / 2 + rTop).toFixed(1)} ${y.toFixed(1)} H${(cx + barW / 2 - rTop).toFixed(1)} Q${(cx + barW / 2).toFixed(1)} ${y.toFixed(1)} ${(cx + barW / 2).toFixed(1)} ${(y + rTop).toFixed(1)} V${Y(0)} Z" fill="${o.color}"/>`;
+    }
+    if (i % o.labelEvery === (o.labelEvery > 1 ? 1 : 0)) {
+      g += `<text x="${cx}" y="${H - 5}" text-anchor="middle" font-size="10.5" fill="var(--muted)">${d.label}</text>`;
+    }
+  });
+  if (o.target > 0) {
+    g += `<line x1="${M.l}" x2="${W - M.r}" y1="${Y(o.target)}" y2="${Y(o.target)}" stroke="var(--ink-2)" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+    g += `<text x="${W - M.r}" y="${Y(o.target) - 6}" text-anchor="end" font-size="11" fill="var(--ink-2)">Ziel ${fmtNum(o.target, o.decimals)}</text>`;
+  }
+  g += `<line x1="${M.l}" x2="${W - M.r}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line)" stroke-width="1.5"/>`;
+  const svg = mkSvg(W, H, g);
+  box.appendChild(svg);
+  const tip = box.querySelector(".viz-tip");
+  svg.addEventListener("pointermove", ev => {
+    const r = svg.getBoundingClientRect();
+    const px = (ev.clientX - r.left) * (W / r.width);
+    const i = Math.max(0, Math.min(data.length - 1, Math.floor((px - M.l) / bandW)));
+    const d = data[i];
+    const cx = M.l + bandW * i + bandW / 2;
+    tip.style.display = "block";
+    tip.style.left = (cx * r.width / W) + "px";
+    tip.style.top = (Y(Math.max(d.val, yMax * 0.03)) * r.height / H) + "px";
+    tip.innerHTML = `${d.label}<br><b class="tnum">${fmtNum(d.val, o.decimals)}${o.unit}</b>`;
+  });
+  svg.addEventListener("pointerleave", () => { tip.style.display = "none"; });
+}
+function drawTrends() {
+  const c = calc();
+  const days14 = lastNDays(14);
+  drawBars("protChart", days14.map(k => ({ label: fmtDate(k), val: dayTotals(k).protein })),
+    { target: c ? c.protein : 0, color: "var(--c-protein)", unit: " g" });
+  drawBars("waterChart", days14.map(k => ({ label: fmtDate(k), val: (state.water[k] || 0) * 0.25 })),
+    { target: c ? c.waterGoal * 0.25 : 0, color: "var(--c-water)", unit: " l", decimals: 2 });
+  const stepItem = state.checkItems.find(it => it.type === "steps");
+  if (stepItem) {
+    drawBars("stepsChart", days14.map(k => ({ label: fmtDate(k), val: (state.checks[k] || {})[stepItem.id] || 0 })),
+      { target: stepItem.target, color: "var(--c-steps)" });
+  } else {
+    document.getElementById("stepsCard").hidden = true;
+  }
+  const weeks = [];
+  const keyOf = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  for (let wI = 7; wI >= 0; wI--) {
+    const end = new Date(); end.setDate(end.getDate() - wI * 7);
+    const start = new Date(end); start.setDate(end.getDate() - 6);
+    const count = state.workouts.filter(w => w.date >= keyOf(start) && w.date <= keyOf(end)).length;
+    weeks.push({ label: fmtDate(keyOf(end)), val: count });
+  }
+  drawBars("woWeekChart", weeks, { color: "var(--c-train)", labelEvery: 2, unit: " Einheiten" });
+  drawBars("checkChart", days14.map(k => {
+    const day = state.checks[k] || {};
+    const total = state.checkItems.length || 1;
+    const done = state.checkItems.filter(it => clItemDone(it, day[it.id])).length;
+    return { label: fmtDate(k), val: Math.round(done / total * 100) };
+  }), { target: 100, color: "var(--c-check)", unit: " %" });
 }
 
 /* ── Wochenbericht: letzte 7 Tage ── */
@@ -1523,11 +1806,11 @@ function drawWeightChart() {
     g += `<text x="${W - M.r}" y="${Y(goal) - 6}" text-anchor="end" font-size="11" fill="var(--muted)">Ziel ${fmtNum(goal, 1)}</text>`;
   }
   const path = data.map((e, i) => (i ? "L" : "M") + X(xs[i]).toFixed(1) + " " + Y(ys[i]).toFixed(1)).join(" ");
-  g += `<path d="${path}" fill="none" stroke="var(--series-1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  g += `<path d="${path}" fill="none" stroke="var(--c-weight)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
   const li = data.length - 1;
-  g += `<circle cx="${X(xs[li])}" cy="${Y(ys[li])}" r="4.5" fill="var(--series-1)" stroke="var(--surface)" stroke-width="2"/>`;
+  g += `<circle cx="${X(xs[li])}" cy="${Y(ys[li])}" r="4.5" fill="var(--c-weight)" stroke="var(--surface)" stroke-width="2"/>`;
   g += `<text x="${X(xs[li]) - 8}" y="${Y(ys[li]) - 10}" text-anchor="end" font-size="12" font-weight="700" fill="var(--ink)" style="font-variant-numeric:tabular-nums">${fmtNum(ys[li], 1)} kg</text>`;
-  g += `<circle class="hoverdot" r="4.5" fill="var(--series-1)" stroke="var(--surface)" stroke-width="2" style="display:none"/>`;
+  g += `<circle class="hoverdot" r="4.5" fill="var(--c-weight)" stroke="var(--surface)" stroke-width="2" style="display:none"/>`;
   g += `<line class="crosshair" y1="${M.t}" y2="${H - M.b}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3" style="display:none"/>`;
 
   const svg = mkSvg(W, H, g);
@@ -1591,7 +1874,7 @@ function drawKcalChart() {
       const y = Y(d.kcal), h = Y(0) - y;
       const over = target > 0 && d.kcal > target;
       const rTop = Math.min(4, h);
-      g += `<path d="M${(cx - barW / 2).toFixed(1)} ${Y(0)} V${(y + rTop).toFixed(1)} Q${(cx - barW / 2).toFixed(1)} ${y.toFixed(1)} ${(cx - barW / 2 + rTop).toFixed(1)} ${y.toFixed(1)} H${(cx + barW / 2 - rTop).toFixed(1)} Q${(cx + barW / 2).toFixed(1)} ${y.toFixed(1)} ${(cx + barW / 2).toFixed(1)} ${(y + rTop).toFixed(1)} V${Y(0)} Z" fill="${over ? "var(--over)" : "var(--series-1)"}"/>`;
+      g += `<path d="M${(cx - barW / 2).toFixed(1)} ${Y(0)} V${(y + rTop).toFixed(1)} Q${(cx - barW / 2).toFixed(1)} ${y.toFixed(1)} ${(cx - barW / 2 + rTop).toFixed(1)} ${y.toFixed(1)} H${(cx + barW / 2 - rTop).toFixed(1)} Q${(cx + barW / 2).toFixed(1)} ${y.toFixed(1)} ${(cx + barW / 2).toFixed(1)} ${(y + rTop).toFixed(1)} V${Y(0)} Z" fill="${over ? "var(--over)" : "var(--c-kcal)"}"/>`;
     }
     if (i % 3 === 1) g += `<text x="${cx}" y="${H - 5}" text-anchor="middle" font-size="10.5" fill="var(--muted)">${fmtDate(d.key)}</text>`;
   });

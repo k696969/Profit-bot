@@ -1,7 +1,7 @@
 <title>Wandel — Dein Transformations-Tracker</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f4f6f4">
+<meta name="theme-color" content="#000000">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -11,82 +11,43 @@
 <link rel="icon" href="icon-192.png">
 <style>
   :root {
-    --page: #f4f5fa;
-    --surface: #ffffff;
-    --ink: #1b1c24;
-    --ink-2: #5b5e6d;
-    --muted: #9095a5;
-    --line: #e9eaf2;
-    --hairline: rgba(27, 28, 36, 0.06);
-    --accent: #10b981;
-    --accent-deep: #087f5b;
-    --accent-wash: #e5f8f0;
-    --good-text: #0a8754;
-    --over: #ef4444;
-    --over-wash: #feecec;
-    --series-1: #2fb5f3;
-    --grid: #ecedf4;
-    --btn-alt: #1b1c24;
-    --nav-bg: rgba(255, 255, 255, 0.94);
-    --tip-bg: #23242e;
-    --streak-bg: #fff1da;
-    --streak-ink: #c2700a;
-    --warn-bg: #fff3e0;
-    --warn-ink: #9a5b16;
-    /* Kategorie-Farben (bunt & lebendig) */
-    --c-kcal: #ff7a3d; --w-kcal: #ffeee3;
-    --c-train: #f43f5e; --w-train: #ffe8ed;
-    --c-protein: #8b5cf6; --w-protein: #f2ecff;
-    --c-water: #2fb5f3; --w-water: #e3f5fe;
-    --c-weight: #10b981; --w-weight: #e5f8f0;
-    --c-check: #f5a623; --w-check: #fff3da;
-    --c-steps: #22c55e;
-    --grad-brand: linear-gradient(135deg, #2dd4a0, #0ca5a5);
-    --grad-food: linear-gradient(135deg, #ffb457, #ff5e7d);
-    --grad-train: linear-gradient(135deg, #fb7185, #f97316);
+    --page: #000000;
+    --surface: #1c1c1e;
+    --surface-2: #2c2c2e;
+    --ink: #ffffff;
+    --ink-2: #c7c7cc;
+    --muted: #8e8e93;
+    --line: #2c2c2e;
+    --hairline: rgba(255, 255, 255, 0.08);
+    --accent: #30d158;
+    --accent-deep: #7ce8a4;
+    --accent-wash: rgba(48, 209, 88, 0.16);
+    --good-text: #30d158;
+    --over: #ff453a;
+    --over-wash: rgba(255, 69, 58, 0.16);
+    --series-1: #64d2ff;
+    --grid: #2c2c2e;
+    --btn-alt: #2c2c2e;
+    --nav-bg: rgba(16, 16, 18, 0.94);
+    --tip-bg: #2c2c2e;
+    --streak-bg: rgba(255, 214, 10, 0.16);
+    --streak-ink: #ffd60a;
+    --warn-bg: rgba(255, 159, 10, 0.14);
+    --warn-ink: #ff9f0a;
+    /* Neon-Kategoriefarben (Apple-Fitness-Stil) */
+    --c-kcal: #fa114f; --w-kcal: rgba(250, 17, 79, 0.16);
+    --c-train: #a8f000; --w-train: rgba(168, 240, 0, 0.14);
+    --c-protein: #bf5af2; --w-protein: rgba(191, 90, 242, 0.16);
+    --c-water: #64d2ff; --w-water: rgba(100, 210, 255, 0.15);
+    --c-weight: #30d158; --w-weight: rgba(48, 209, 88, 0.16);
+    --c-check: #ffd60a; --w-check: rgba(255, 214, 10, 0.14);
+    --c-steps: #b57bee;
+    --grad-brand: linear-gradient(135deg, #34e07a, #0fb56f);
+    --grad-food: linear-gradient(135deg, #fa114f, #ff6482);
+    --grad-train: linear-gradient(135deg, #a8f000, #58c945);
     --nav-h: 66px;
   }
-  /* ── Dark Mode: folgt dem System, data-theme (z. B. Claude-Viewer) gewinnt ── */
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --page: #0f1015; --surface: #191a22; --ink: #eef0f4; --ink-2: #b0b4c0;
-      --muted: #7d8290; --line: #262834; --hairline: rgba(255, 255, 255, 0.07);
-      --accent: #17c78f; --accent-deep: #7ef0c8; --accent-wash: #14332a;
-      --good-text: #4ade80; --over: #f87171; --over-wash: #3a2020;
-      --series-1: #38bdf8; --grid: #262834;
-      --btn-alt: #2b2d3a; --nav-bg: rgba(25, 26, 34, 0.92); --tip-bg: #000000;
-      --streak-bg: #3a2c12; --streak-ink: #f5b866;
-      --warn-bg: #3a2c12; --warn-ink: #f0c493;
-      --w-kcal: rgba(255, 122, 61, 0.16); --w-train: rgba(244, 63, 94, 0.16);
-      --w-protein: rgba(139, 92, 246, 0.18); --w-water: rgba(47, 181, 243, 0.16);
-      --w-weight: rgba(16, 185, 129, 0.16); --w-check: rgba(245, 166, 35, 0.16);
-    }
-  }
-  :root[data-theme="dark"] {
-    --page: #0f1015; --surface: #191a22; --ink: #eef0f4; --ink-2: #b0b4c0;
-    --muted: #7d8290; --line: #262834; --hairline: rgba(255, 255, 255, 0.07);
-    --accent: #17c78f; --accent-deep: #7ef0c8; --accent-wash: #14332a;
-    --good-text: #4ade80; --over: #f87171; --over-wash: #3a2020;
-    --series-1: #38bdf8; --grid: #262834;
-    --btn-alt: #2b2d3a; --nav-bg: rgba(25, 26, 34, 0.92); --tip-bg: #000000;
-    --streak-bg: #3a2c12; --streak-ink: #f5b866;
-    --warn-bg: #3a2c12; --warn-ink: #f0c493;
-    --w-kcal: rgba(255, 122, 61, 0.16); --w-train: rgba(244, 63, 94, 0.16);
-    --w-protein: rgba(139, 92, 246, 0.18); --w-water: rgba(47, 181, 243, 0.16);
-    --w-weight: rgba(16, 185, 129, 0.16); --w-check: rgba(245, 166, 35, 0.16);
-  }
-  :root[data-theme="light"] {
-    --page: #f4f5fa; --surface: #ffffff; --ink: #1b1c24; --ink-2: #5b5e6d;
-    --muted: #9095a5; --line: #e9eaf2; --hairline: rgba(27, 28, 36, 0.06);
-    --accent: #10b981; --accent-deep: #087f5b; --accent-wash: #e5f8f0;
-    --good-text: #0a8754; --over: #ef4444; --over-wash: #feecec;
-    --series-1: #2fb5f3; --grid: #ecedf4;
-    --btn-alt: #1b1c24; --nav-bg: rgba(255, 255, 255, 0.94); --tip-bg: #23242e;
-    --streak-bg: #fff1da; --streak-ink: #c2700a;
-    --warn-bg: #fff3e0; --warn-ink: #9a5b16;
-    --w-kcal: #ffeee3; --w-train: #ffe8ed; --w-protein: #f2ecff;
-    --w-water: #e3f5fe; --w-weight: #e5f8f0; --w-check: #fff3da;
-  }
+  /* Bewusst immer dunkel — Apple-Fitness-Look. */
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html { -webkit-text-size-adjust: 100%; }
   body {
@@ -113,14 +74,27 @@
     box-shadow: 0 1px 2px rgba(16, 21, 15, 0.03);
   }
   .card h2 {
-    margin: 0 0 12px; font-size: 11px; font-weight: 700; letter-spacing: 0.09em;
-    text-transform: uppercase; color: var(--muted);
+    margin: 0 0 12px; font-size: 18px; font-weight: 750; letter-spacing: -0.01em;
+    color: var(--ink);
   }
   .hint { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
 
   /* ── Kalorien-Ring ── */
-  .ringcard { text-align: center; padding: 22px 18px 18px; }
-  .ringbox { position: relative; width: 216px; height: 216px; margin: 0 auto; }
+  .ringcard { padding: 20px 18px; }
+  .ringrow { display: flex; align-items: center; gap: 20px; }
+  .ringbox { position: relative; width: 152px; height: 152px; flex: none; }
+  .ringbox svg { width: 100%; height: 100%; }
+  .ringstats { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+  .rs .rk { display: block; font-size: 15px; font-weight: 700; }
+  .rs .rv { font-size: 21px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; white-space: nowrap; }
+  .dayswitch { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0 0 12px; }
+  .dayswitch button {
+    appearance: none; border: none; cursor: pointer; width: 44px; height: 44px; border-radius: 50%;
+    background: var(--surface); color: var(--ink); font-size: 22px; font-weight: 700; line-height: 1;
+  }
+  .dayswitch button:disabled { opacity: 0.3; }
+  #dayLabel { min-width: 168px; text-align: center; font-weight: 750; font-size: 16px; }
+  .dayswitch.past #dayLabel { color: var(--c-check); }
   .ringbox svg { transform: rotate(-90deg); }
   .ring-track { stroke: var(--w-kcal); }
   .ring-fill { stroke: url(#ringGrad); transition: stroke-dashoffset .45s ease; }
@@ -131,11 +105,11 @@
     align-items: center; justify-content: center; gap: 0;
   }
   .ringcenter .big {
-    font-size: 46px; font-weight: 800; letter-spacing: -0.02em; line-height: 1;
-    color: var(--accent-deep); font-variant-numeric: tabular-nums;
+    font-size: 29px; font-weight: 800; letter-spacing: -0.02em; line-height: 1;
+    color: var(--ink); font-variant-numeric: tabular-nums;
   }
   .ringcenter .big.overtxt { color: var(--over); }
-  .ringcenter .lbl { font-size: 13.5px; color: var(--ink-2); margin-top: 6px; }
+  .ringcenter .lbl { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
   .ministat {
     display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;
     margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line);
@@ -143,9 +117,6 @@
   .ministat .m { display: flex; flex-direction: column; gap: 1px; }
   .ministat .k { font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
   .ministat .v { font-size: 16.5px; font-weight: 750; font-variant-numeric: tabular-nums; }
-  #msEaten { color: var(--c-kcal); }
-  #msBurn { color: var(--c-train); }
-  #msProt { color: var(--c-protein); }
   .ministat .s { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
   /* ── Schnell-Buttons ── */
@@ -389,6 +360,11 @@
 
   <!-- ════════ TAB: HEUTE ════════ -->
   <section id="tab-heute">
+    <div class="dayswitch" id="daySwitch">
+      <button type="button" onclick="shiftDay(-1)" aria-label="Vorheriger Tag">‹</button>
+      <span id="dayLabel">Heute</span>
+      <button type="button" id="dayFwd" onclick="shiftDay(1)" aria-label="Nächster Tag" disabled>›</button>
+    </div>
     <div id="noProfileNotice" class="card" hidden>
       <h2>Willkommen 🌱</h2>
       <p style="margin:0">Einmal kurz dein Profil ausfüllen — daraus berechne ich dein tägliches Kalorienbudget, Protein- und Wasserziel.</p>
@@ -396,6 +372,7 @@
     </div>
 
     <div class="card ringcard" id="ringCard">
+      <div class="ringrow">
       <div class="ringbox">
         <svg viewBox="0 0 216 216" width="216" height="216" role="img" aria-label="Kalorienbudget heute">
           <defs>
@@ -413,10 +390,11 @@
           <span class="lbl" id="ringLbl">kcal übrig</span>
         </div>
       </div>
-      <div class="ministat">
-        <div class="m"><span class="k">Gegessen</span><span class="v" id="msEaten">–</span><span class="s" id="msTarget"></span></div>
-        <div class="m"><span class="k">Training</span><span class="v" id="msBurn">–</span><span class="s">extra Budget</span></div>
-        <div class="m"><span class="k">Protein</span><span class="v" id="msProt">–</span><span class="s" id="msProtGoal"></span></div>
+      <div class="ringstats">
+        <div class="rs"><span class="rk">Kalorien</span><span class="rv" style="color:var(--c-kcal)" id="rsEaten">–</span></div>
+        <div class="rs"><span class="rk">Training</span><span class="rv" style="color:var(--c-train)" id="rsBurn">–</span></div>
+        <div class="rs"><span class="rk">Protein</span><span class="rv" style="color:var(--c-protein)" id="rsProt">–</span></div>
+      </div>
       </div>
     </div>
 
@@ -427,7 +405,7 @@
 
     <div class="duo">
       <div class="card">
-        <h2>Gewicht heute</h2>
+        <h2>Gewicht</h2>
         <form class="inline" onsubmit="addWeight(event)">
           <input id="weightInput" type="number" step="0.1" min="30" max="400" required placeholder="kg" inputmode="decimal" aria-label="Gewicht in kg">
           <button class="btn" type="submit" aria-label="Gewicht speichern">✓</button>
@@ -457,7 +435,7 @@
     </div>
 
     <div class="card">
-      <h2>Heute eingetragen</h2>
+      <h2 id="dayListHead">Heute eingetragen</h2>
       <ul class="entries" id="dayList"></ul>
     </div>
   </section>
@@ -760,6 +738,17 @@ function load() {
 }
 function save() { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 
+let activeDate = null; // wird nach todayKey-Definition gesetzt
+function activeKey() { return activeDate || todayKey(); }
+function shiftDay(delta) {
+  const d = new Date(activeKey() + "T12:00:00");
+  d.setDate(d.getDate() + delta);
+  const k = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  const min = new Date(); min.setDate(min.getDate() - 30);
+  if (k > todayKey() || d < min) return; // max. 30 Tage nachtragen, nicht in die Zukunft
+  activeDate = k;
+  renderHeute();
+}
 function todayKey() {
   const d = new Date();
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
@@ -911,7 +900,7 @@ function addMeal(ev) {
     per100 = null;
     document.getElementById("gramsRow").hidden = true;
   }
-  state.meals.push({ id: uid(), date: todayKey(), name, kcal, protein });
+  state.meals.push({ id: uid(), date: activeKey(), name, kcal, protein });
   if (document.getElementById("mealFav").checked) {
     state.favorites = state.favorites.filter(f => f.name !== name);
     state.favorites.unshift({ id: uid(), name, kcal, protein });
@@ -945,7 +934,7 @@ function favTap(id) {
     if (!state.favorites.length) renderFavChips();
     return;
   }
-  state.meals.push({ id: uid(), date: todayKey(), name: f.name, kcal: f.kcal, protein: f.protein || 0 });
+  state.meals.push({ id: uid(), date: activeKey(), name: f.name, kcal: f.kcal, protein: f.protein || 0 });
   save(); closeSheet("mealSheet"); renderHeute();
 }
 /* ── Lebensmittel-Suche: lokale Basics + Open Food Facts (Millionen Produkte) ── */
@@ -1195,7 +1184,7 @@ function lastTimeText(name) {
   const n = name.toLowerCase();
   for (let i = state.workouts.length - 1; i >= 0; i--) {
     const w = state.workouts[i];
-    if (w.date === todayKey()) continue;
+    if (w.date === activeKey()) continue;
     const ex = (w.exercises || []).find(e => e.name.toLowerCase() === n);
     if (ex && ex.sets.length) {
       const s = ex.sets.map(x => `${fmtNum(x.kg, x.kg % 1 ? 1 : 0)} kg × ${x.reps}`).join(", ");
@@ -1217,9 +1206,9 @@ function saveWorkout() {
   }
   const t = WORKOUT_TYPES[twDraft.type];
   const id = uid();
-  state.workouts.push({ id, date: todayKey(), type: twDraft.type, intensity: twDraft.intensity, min, kcal, exercises });
+  state.workouts.push({ id, date: activeKey(), type: twDraft.type, intensity: twDraft.intensity, min, kcal, exercises });
   if (kcal > 0) {
-    state.activities.push({ id, date: todayKey(), name: `${t.ico} ${t.label} (${min} min)`, kcal });
+    state.activities.push({ id, date: activeKey(), name: `${t.ico} ${t.label} (${min} min)`, kcal });
   }
   save(); closeSheet("trainSheet"); renderHeute();
   if (!document.getElementById("tab-training").hidden) renderTraining();
@@ -1272,14 +1261,14 @@ function addWeight(ev) {
   ev.preventDefault();
   const kg = parseFloat(document.getElementById("weightInput").value.replace(",", "."));
   if (!kg) return;
-  const key = todayKey();
+  const key = activeKey();
   state.weights = state.weights.filter(e => e.date !== key);
   state.weights.push({ date: key, kg });
   state.weights.sort((a, b) => a.date < b.date ? -1 : 1);
   save(); ev.target.reset(); renderHeute();
 }
 function changeWater(delta) {
-  const key = todayKey();
+  const key = activeKey();
   state.water[key] = Math.max(0, (state.water[key] || 0) + delta);
   save(); renderHeute();
 }
@@ -1348,8 +1337,16 @@ const RING_C = 2 * Math.PI * 97; // Umfang des Rings
 
 function renderHeute() {
   const c = calc();
-  const key = todayKey();
+  const key = activeKey();
   const t = dayTotals(key);
+  const isToday = key === todayKey();
+  const yd = new Date(); yd.setDate(yd.getDate() - 1);
+  const yKey = yd.getFullYear() + "-" + String(yd.getMonth() + 1).padStart(2, "0") + "-" + String(yd.getDate()).padStart(2, "0");
+  document.getElementById("dayLabel").textContent = isToday ? "Heute"
+    : (key === yKey ? "Gestern · nachtragen" : fmtDate(key, { weekday: "short", day: "2-digit", month: "2-digit" }) + " · nachtragen");
+  document.getElementById("daySwitch").classList.toggle("past", !isToday);
+  document.getElementById("dayFwd").disabled = isToday;
+  document.getElementById("dayListHead").textContent = isToday ? "Heute eingetragen" : "Eingetragen an diesem Tag";
   document.getElementById("noProfileNotice").hidden = !!state.profile;
   document.getElementById("ringCard").hidden = !state.profile;
 
@@ -1365,11 +1362,9 @@ function renderHeute() {
     big.textContent = fmtNum(Math.abs(remaining));
     big.classList.toggle("overtxt", remaining < 0);
     document.getElementById("ringLbl").textContent = remaining < 0 ? "kcal über dem Ziel" : "kcal übrig";
-    document.getElementById("msEaten").textContent = fmtNum(t.eaten);
-    document.getElementById("msTarget").textContent = "Ziel " + fmtNum(budget);
-    document.getElementById("msBurn").textContent = "+" + fmtNum(t.burned);
-    document.getElementById("msProt").textContent = fmtNum(t.protein) + " g";
-    document.getElementById("msProtGoal").textContent = "von " + fmtNum(c.protein) + " g";
+    document.getElementById("rsEaten").textContent = fmtNum(t.eaten) + " / " + fmtNum(budget) + " kcal";
+    document.getElementById("rsBurn").textContent = "+" + fmtNum(t.burned) + " kcal";
+    document.getElementById("rsProt").textContent = fmtNum(t.protein) + " / " + fmtNum(c.protein) + " g";
   }
 
   /* Tagesliste: Mahlzeiten + Training zusammen */
@@ -1390,7 +1385,7 @@ function renderHeute() {
   /* Gewicht */
   const todayW = state.weights.find(e => e.date === key);
   document.getElementById("weightHint").textContent = todayW
-    ? `Heute: ${fmtNum(todayW.kg, 1)} kg ✓`
+    ? `Eingetragen: ${fmtNum(todayW.kg, 1)} kg ✓`
     : "Morgens, nüchtern — täglich wiegen hilft (Zheng 2015).";
 
   /* Wasser */
@@ -1413,7 +1408,7 @@ function renderHeute() {
 
 /* ══════════════ Tages-Checkliste ══════════════ */
 let clEdit = false;
-function clDay() { return state.checks[todayKey()] || {}; }
+function clDay() { return state.checks[activeKey()] || {}; }
 function clItemDone(it, v) {
   if (it.type === "check") return !!v;
   return (v || 0) >= (it.target || 1);
@@ -1452,7 +1447,7 @@ function renderChecklist() {
   document.getElementById("clEditBtn").textContent = clEdit ? "Fertig" : "Bearbeiten";
 }
 function clSetVal(id, v) {
-  const k = todayKey();
+  const k = activeKey();
   if (!state.checks[k]) state.checks[k] = {};
   state.checks[k][id] = v;
   save(); renderHeute();

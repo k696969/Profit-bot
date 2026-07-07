@@ -252,6 +252,29 @@
   ul.sources b { color: var(--ink); }
   ul.sources a { color: var(--accent-deep); text-underline-offset: 2px; }
   .footer-note { color: var(--muted); font-size: 12.5px; margin-top: 24px; }
+
+  /* ── Konsistenz ── */
+  .krow { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+  .krow:first-of-type { border-top: none; }
+  .krow .kico { font-size: 19px; width: 26px; text-align: center; flex: none; }
+  .krow .kmain { flex: 1; min-width: 0; }
+  .krow .kname { font-size: 14px; font-weight: 700; display: flex; justify-content: space-between; gap: 8px; }
+  .krow .kname span { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .kbar { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; margin-top: 5px; }
+  .kbar i { display: block; height: 100%; border-radius: 4px; }
+  .matrix { display: flex; flex-direction: column; gap: 7px; margin-top: 4px; }
+  .mrow { display: flex; align-items: center; gap: 8px; }
+  .mrow .kico { font-size: 15px; width: 22px; text-align: center; flex: none; }
+  .mdots { flex: 1; display: grid; grid-template-columns: repeat(28, 1fr); gap: 3px; }
+  .mdots span { aspect-ratio: 1; border-radius: 3px; background: var(--surface-2); }
+
+  /* ── Übungs-Statistik ── */
+  .exhist { list-style: none; margin: 10px 0 0; padding: 0; max-height: 300px; overflow-y: auto; }
+  .exhist li { padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .exhist li:first-child { border-top: none; }
+  .exhist .d { color: var(--muted); font-size: 12.5px; }
+  .exhist .s { font-variant-numeric: tabular-nums; }
+  .exhist .pr { color: var(--c-gebet); font-weight: 700; }
   section[hidden] { display: none; }
 
   /* ── Fotos ── */
@@ -355,6 +378,14 @@
       <p class="hint" style="line-height:2"><span class="dotlegend" style="background:var(--c-train);margin-left:0"></span>Kraftsport<span class="dotlegend" style="background:#ff9f0a"></span>Kampfsport<span class="dotlegend" style="background:var(--c-steps)"></span>Cardio<span class="dotlegend" style="background:var(--muted)"></span>Sonstiges</p>
     </div>
     <p style="margin:0 0 12px"><button class="btn" style="width:100%" onclick="openSheet('trainSheet')">＋ Training eintragen</button></p>
+    <div class="card" id="exStatCard" hidden>
+      <h2 style="color:var(--c-train)">📈 Übungs-Statistik</h2>
+      <select id="exStatSel" onchange="renderExStats()" aria-label="Übung wählen"></select>
+      <div class="statrow" id="exStatRow" style="margin:12px 0"></div>
+      <div class="chartbox" id="exStatChart"><div class="viz-tip"></div></div>
+      <p class="hint">Schwerster Satz pro Einheit — so siehst du deine Steigerung über Monate.</p>
+      <ul class="exhist" id="exHist"></ul>
+    </div>
     <div id="workoutList"></div>
     <p class="empty" id="workoutEmpty" style="padding:0 4px">Noch keine Einheiten — trag dein erstes Training ein! 🏋️</p>
   </section>
@@ -362,6 +393,13 @@
   <!-- ════════ TAB: VERLAUF ════════ -->
   <section id="tab-verlauf" hidden>
     <div class="statrow" id="progressStats"></div>
+    <div class="card" id="konsCard">
+      <h2>🎯 Konsistenz — wie oft hast du's geschafft?</h2>
+      <div class="chips" id="konsChips" style="margin-bottom:6px"></div>
+      <div id="konsRows"></div>
+      <div class="matrix" id="konsMatrix"></div>
+      <p class="hint">Punktematrix: die letzten 28 Tage pro Tracker — gefüllt = Ziel geschafft.</p>
+    </div>
     <div class="card" id="weekCard" hidden>
       <h2>Wochenbericht · letzte 7 Tage</h2>
       <div class="calcsummary" id="weekSummary"></div>
@@ -1001,6 +1039,7 @@ function renderTraining() {
   document.getElementById("dotGrid").innerHTML = last28.map(k =>
     `<span class="${byDate[k] ? "t-" + byDate[k] : ""}" title="${fmtDate(k)}"></span>`).join("");
 
+  renderExStats();
   const list = [...state.workouts].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 30);
   document.getElementById("workoutEmpty").hidden = list.length > 0;
   document.getElementById("workoutList").innerHTML = list.map(w => {
@@ -1016,6 +1055,121 @@ function renderTraining() {
         <button class="del-x" aria-label="Einheit löschen" onclick="delWorkout('${w.id}')">×</button>
       </div>
       ${exHtml}</div>`;
+  }).join("");
+}
+
+/* ══════════════ Konsistenz-Statistik ══════════════ */
+/* „Geschafft"-Definition pro Tracker (Ziel erreicht, nicht nur eingetragen) */
+function goalReached(id, key) {
+  switch (id) {
+    case "training": return workoutsOn(key).length > 0;
+    case "sleep": { const h = state.sleep[key]; return h >= 7; }
+    case "weight": return weightOn(key) != null;
+    case "steps": return (state.steps[key] || 0) >= 10000;
+    case "gebete": return (state.gebete[key] || 0) >= 5;
+    case "supps": return !!state.supps[key];
+  }
+  return false;
+}
+let konsPeriod = 30;
+function setKonsPeriod(n) { konsPeriod = n; renderKonsistenz(); }
+function konsKeys() {
+  if (konsPeriod === 0) { // seit Start (19.07.)
+    const out = [];
+    const d = new Date(START_DATE + "T12:00:00");
+    const today = todayKey();
+    while (keyOf(d) <= today) { out.push(keyOf(d)); d.setDate(d.getDate() + 1); }
+    return out;
+  }
+  return lastNDays(konsPeriod);
+}
+function renderKonsistenz() {
+  const chips = [[7, "7 Tage"], [30, "30 Tage"], [0, "Seit Start"]];
+  document.getElementById("konsChips").innerHTML = chips.map(([v, l]) =>
+    `<button type="button" class="${konsPeriod === v ? "sel" : ""}" onclick="setKonsPeriod(${v})">${l}</button>`).join("");
+  const keys = konsKeys();
+  const rowsEl = document.getElementById("konsRows");
+  if (!keys.length) {
+    rowsEl.innerHTML = `<p class="empty">Los geht's am 19.07. — ab dann zählt deine Quote. 🚀</p>`;
+  } else {
+    rowsEl.innerHTML = TRACKERS.map(t => {
+      const hit = keys.filter(k => goalReached(t.id, k)).length;
+      const pct = Math.round(hit / keys.length * 100);
+      return `<div class="krow">
+        <span class="kico">${t.ico}</span>
+        <div class="kmain">
+          <div class="kname">${t.name}<span>${hit}/${keys.length} Tage · ${pct} %</span></div>
+          <div class="kbar"><i style="width:${pct}%;background:${t.color}"></i></div>
+        </div></div>`;
+    }).join("");
+  }
+  /* Punktematrix: letzte 28 Tage pro Tracker */
+  const days28 = lastNDays(28);
+  document.getElementById("konsMatrix").innerHTML = TRACKERS.map(t =>
+    `<div class="mrow"><span class="kico">${t.ico}</span><div class="mdots">${
+      days28.map(k => `<span title="${fmtDate(k)}" style="${goalReached(t.id, k) ? "background:" + t.color : ""}"></span>`).join("")
+    }</div></div>`).join("");
+}
+
+/* ══════════════ Übungs-Statistik ══════════════ */
+function allExerciseNames() {
+  const map = new Map();
+  state.workouts.forEach(w => (w.exercises || []).forEach(ex => {
+    const k = ex.name.toLowerCase();
+    if (!map.has(k)) map.set(k, ex.name);
+  }));
+  return [...map.values()].sort((a, b) => a.localeCompare(b, "de"));
+}
+function exSessions(name) {
+  const n = name.toLowerCase();
+  return state.workouts
+    .map(w => {
+      const ex = (w.exercises || []).find(e => e.name.toLowerCase() === n);
+      return ex && ex.sets.length ? { date: w.date, sets: ex.sets } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
+}
+function renderExStats() {
+  const card = document.getElementById("exStatCard");
+  const names = allExerciseNames();
+  if (!names.length) { card.hidden = true; return; }
+  card.hidden = false;
+  const sel = document.getElementById("exStatSel");
+  const cur = sel.value;
+  sel.innerHTML = names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
+  if (names.includes(cur)) sel.value = cur;
+  const name = sel.value || names[0];
+  const sessions = exSessions(name);
+  const allSets = sessions.flatMap(s => s.sets);
+  const pr = Math.max(...allSets.map(x => x.kg));
+  const prSet = allSets.find(x => x.kg === pr);
+  const first = sessions[0], last = sessions[sessions.length - 1];
+  const firstMax = Math.max(...first.sets.map(x => x.kg));
+  const lastMax = Math.max(...last.sets.map(x => x.kg));
+  const diff = lastMax - firstMax;
+  document.getElementById("exStatRow").innerHTML = `
+    <div class="stat"><div class="label">Bestleistung</div>
+      <div class="value" style="color:var(--c-gebet)">${fmtNum(pr, pr % 1 ? 1 : 0)}</div>
+      <div class="sub">kg × ${prSet.reps} Wdh.</div></div>
+    <div class="stat"><div class="label">Einheiten</div>
+      <div class="value">${sessions.length}</div>
+      <div class="sub">seit ${fmtDate(first.date, { day: "2-digit", month: "2-digit", year: "2-digit" })}</div></div>
+    <div class="stat"><div class="label">Entwicklung</div>
+      <div class="value ${diff >= 0 ? "hero-c" : ""}">${diff >= 0 ? "+" : "−"}${fmtNum(Math.abs(diff), diff % 1 ? 1 : 0)}</div>
+      <div class="sub">kg seit der ersten Einheit</div></div>`;
+  /* Chart: schwerster Satz pro Einheit (letzte 20) */
+  const chartData = sessions.slice(-20).map(s => ({
+    label: fmtDate(s.date), val: Math.max(...s.sets.map(x => x.kg))
+  }));
+  drawBars("exStatChart", chartData, { color: "var(--c-train)", unit: " kg", decimals: 1, labelEvery: Math.max(1, Math.ceil(chartData.length / 5)) });
+  document.getElementById("exStatCard").hidden = false; // drawBars versteckt die Karte bei 0-Werten (z. B. nur Körpergewicht)
+  /* Historie: alle Einheiten, neueste zuerst — auch von vor Monaten */
+  document.getElementById("exHist").innerHTML = [...sessions].reverse().map(sess => {
+    const maxKg = Math.max(...sess.sets.map(x => x.kg));
+    return `<li><span class="d">${fmtDate(sess.date, { weekday: "short", day: "2-digit", month: "2-digit", year: "2-digit" })}</span><br>
+      <span class="s">${sess.sets.map(x => `${fmtNum(x.kg, x.kg % 1 ? 1 : 0)} kg × ${x.reps}${x.kg === pr ? ' <span class="pr">PR</span>' : ""}`).join(" · ")}</span>
+      <span class="s" style="color:var(--muted)"> — Top: ${fmtNum(maxKg, maxKg % 1 ? 1 : 0)} kg</span></li>`;
   }).join("");
 }
 
@@ -1074,6 +1228,7 @@ function renderVerlauf() {
     stats.innerHTML = `<div class="stat" style="grid-column:1/-1"><div class="label">Los geht's</div>
       <div class="value">🚀</div><div class="sub">Wiege dich, dann startet deine Statistik.</div></div>`;
   }
+  renderKonsistenz();
   renderWeekReport();
   drawWeightChart();
   const days14 = lastNDays(14);

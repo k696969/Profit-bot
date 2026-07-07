@@ -253,6 +253,31 @@
   ul.sources a { color: var(--accent-deep); text-underline-offset: 2px; }
   .footer-note { color: var(--muted); font-size: 12.5px; margin-top: 24px; }
 
+  /* ── Accordions (Statistik) ── */
+  details.acc {
+    background: var(--surface); border: 1px solid var(--hairline);
+    border-radius: 20px; padding: 4px 18px; margin-bottom: 12px;
+  }
+  details.acc summary {
+    list-style: none; cursor: pointer; font-size: 17px; font-weight: 750;
+    padding: 13px 0; display: flex; justify-content: space-between; align-items: center;
+  }
+  details.acc summary::-webkit-details-marker { display: none; }
+  details.acc summary::after { content: "›"; color: var(--muted); font-size: 22px; transform: rotate(90deg); transition: transform .2s; }
+  details.acc[open] summary::after { transform: rotate(-90deg); }
+  @media (prefers-reduced-motion: reduce) { details.acc summary::after { transition: none; } }
+  details.acc > *:not(summary) { margin-bottom: 14px; }
+
+  /* ── Tagebuch ── */
+  #moodChips button { font-size: 23px; padding: 7px 11px; min-height: 50px; }
+  .dentry { border-top: 1px solid var(--line); padding: 10px 0; }
+  .dentry:first-child { border-top: none; }
+  .dhead { display: flex; justify-content: space-between; gap: 10px; font-size: 14.5px; }
+  .dhead b { font-weight: 750; }
+  .dhead span { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .dauto { font-size: 13px; color: var(--ink-2); margin-top: 3px; line-height: 1.55; }
+  .dnote { font-size: 14.5px; margin-top: 5px; font-style: italic; }
+
   /* ── Konsistenz ── */
   .krow { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
   .krow:first-of-type { border-top: none; }
@@ -387,6 +412,12 @@
       <h2>Eigene Ziele</h2>
       <ul class="extras" id="extrasList"></ul>
     </div>
+    <div class="card">
+      <h2>📝 Tagebuch</h2>
+      <div class="chips" id="moodChips"></div>
+      <input id="journalText" placeholder="Ein Satz zu deinem Tag … (optional)" style="margin-top:10px" onchange="saveJournalText(this)">
+      <p class="hint" id="journalAuto"></p>
+    </div>
     <p style="margin:0 0 12px;display:flex;gap:16px">
       <button type="button" class="linkbtn" onclick="addExtra()">＋ Eigenes Tagesziel</button>
       <button type="button" class="linkbtn" id="xEditBtn" onclick="toggleXEdit()" hidden>Bearbeiten</button>
@@ -414,9 +445,25 @@
     <p class="empty" id="workoutEmpty" style="padding:0 4px">Noch keine Einheiten — trag dein erstes Training ein! 🏋️</p>
   </section>
 
-  <!-- ════════ TAB: VERLAUF ════════ -->
+  <!-- ════════ TAB: STATISTIK ════════ -->
   <section id="tab-verlauf" hidden>
-    <div class="statrow" id="progressStats"></div>
+    <div class="card hero" id="scoreCard" hidden>
+      <div class="hero-left">
+        <div class="hero-eyebrow">Durchzieh-Score · 30 Tage</div>
+        <div class="hero-day" id="scoreVal">–</div>
+        <div class="hero-sub" id="scoreSub"></div>
+        <div class="hero-sub" id="scoreSub2" style="margin-top:2px"></div>
+      </div>
+      <div class="doneRing">
+        <svg viewBox="0 0 108 108">
+          <circle class="track" cx="54" cy="54" r="46" fill="none" stroke-width="11"/>
+          <circle class="fill" id="scoreFill" cx="54" cy="54" r="46" fill="none" stroke-width="11"
+                  stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="289"/>
+        </svg>
+        <div class="center"><b id="scoreRingTxt">–</b><span>30 Tage</span></div>
+      </div>
+    </div>
+
     <div class="card" id="konsCard">
       <h2>🎯 Konsistenz — wie oft hast du's geschafft?</h2>
       <div class="chips" id="konsChips" style="margin-bottom:6px"></div>
@@ -424,40 +471,47 @@
       <div class="matrix" id="konsMatrix"></div>
       <p class="hint">Punktematrix: die letzten 28 Tage pro Tracker — gefüllt = Ziel geschafft.</p>
     </div>
-    <div class="card" id="weekCard" hidden>
-      <h2>Wochenbericht · letzte 7 Tage</h2>
-      <div class="calcsummary" id="weekSummary"></div>
+
+    <div class="card" id="diaryCard" hidden>
+      <h2>📔 Tagebuch · letzte 14 Tage</h2>
+      <div id="diaryFeed"></div>
     </div>
-    <div class="card">
-      <h2 style="color:var(--c-weight)">Gewicht (kg)</h2>
+
+    <details class="acc" open ontoggle="if(this.open) setTimeout(renderVerlaufCharts, 40)">
+      <summary>⚖️ Gewicht</summary>
       <div class="chartbox" id="weightChart"><div class="viz-tip"></div></div>
       <p class="empty" id="weightChartEmpty" hidden>Ab 2 Gewichtseinträgen erscheint hier deine Kurve.</p>
-    </div>
-    <div class="card" id="sleepCard">
-      <h2 style="color:var(--c-sleep)">Schlaf · letzte 14 Tage</h2>
+      <p class="hint" id="progHint"></p>
+    </details>
+    <details class="acc" ontoggle="if(this.open) setTimeout(renderVerlaufCharts, 40)">
+      <summary>😴 Schlaf</summary>
       <div class="chartbox" id="sleepChart"><div class="viz-tip"></div></div>
-    </div>
-    <div class="card" id="stepsCard">
-      <h2 style="color:var(--c-steps)">Schritte · letzte 14 Tage</h2>
+    </details>
+    <details class="acc" ontoggle="if(this.open) setTimeout(renderVerlaufCharts, 40)">
+      <summary>👟 Schritte</summary>
       <div class="chartbox" id="stepsChart"><div class="viz-tip"></div></div>
-    </div>
-    <div class="card" id="gebetCard">
-      <h2 style="color:var(--c-gebet)">Gebete · letzte 14 Tage</h2>
+    </details>
+    <details class="acc" ontoggle="if(this.open) setTimeout(renderVerlaufCharts, 40)">
+      <summary>🤲 Gebete</summary>
       <div class="chartbox" id="gebetChart"><div class="viz-tip"></div></div>
-    </div>
-    <div class="card" id="woWeekCard">
-      <h2 style="color:var(--c-train)">Trainings pro Woche · 8 Wochen</h2>
+    </details>
+    <details class="acc" ontoggle="if(this.open) setTimeout(renderVerlaufCharts, 40)">
+      <summary>🏋️ Trainings pro Woche</summary>
       <div class="chartbox" id="woWeekChart"><div class="viz-tip"></div></div>
-    </div>
-    <div class="card">
-      <h2>Letzte Gewichtseinträge</h2>
+    </details>
+    <details class="acc" id="weekCard" hidden>
+      <summary>🧾 Wochenbericht</summary>
+      <div class="calcsummary" id="weekSummary"></div>
+    </details>
+    <details class="acc">
+      <summary>📋 Gewichtseinträge</summary>
       <div class="tablewrap">
         <table>
           <thead><tr><th>Datum</th><th class="num">Gewicht</th><th class="num">Δ</th></tr></thead>
           <tbody id="weightTable"></tbody>
         </table>
       </div>
-    </div>
+    </details>
   </section>
 
   <!-- ════════ TAB: FOTOS ════════ -->
@@ -607,6 +661,9 @@
       <div class="chips" id="finCatChips"></div>
       <div class="field"><label for="finNote">Beschreibung (optional)</label>
         <input id="finNote" placeholder="z. B. Nike TN verkauft"></div>
+      <label style="display:flex;align-items:center;gap:10px;font-size:14.5px;color:var(--ink-2)">
+        <input type="checkbox" id="finRecur" style="width:20px;height:20px;min-height:0;accent-color:var(--accent)">
+        🔁 Monatlich automatisch wiederholen (Abo/Gehalt)</label>
       <button class="btn" type="submit">Speichern</button>
       <button class="btn ghost" type="button" onclick="closeSheet('finSheet')">Abbrechen</button>
     </form>
@@ -634,7 +691,7 @@
     </button>
     <button id="tabbtn-verlauf" onclick="showTab('verlauf')">
       <svg viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M5 15.5 10 10l3.5 3.5L19 7"/></svg>
-      Verlauf
+      Statistik
     </button>
     <button id="tabbtn-fotos" onclick="showTab('fotos')">
       <svg viewBox="0 0 24 24"><path d="M4 8.5h3.2l1.6-2.2h6.4l1.6 2.2H20v10.2H4z"/><circle cx="12" cy="13.2" r="3.1"/></svg>
@@ -670,7 +727,8 @@ const DEFAULT_STATE = {
   extras: [],           // [{id, name}] eigene Tagesziele
   extrasDone: {},       // {date: {id: true}}
   perfect: {},          // {date: true} — Konfetti nur 1× pro Tag
-  finance: []           // [{id, date, type:'in'|'out', amount, cat, note}]
+  journal: {},          // {date: {mood: 1..5, text}}
+  finance: []           // [{id, date, type, amount, cat, note, recur, auto}]
 };
 
 function keyOf(d) {
@@ -704,6 +762,7 @@ function load() {
       if (!Array.isArray(s.weights)) s.weights = [];
       if (!Array.isArray(s.workouts)) s.workouts = [];
       if (!Array.isArray(s.finance)) s.finance = [];
+      if (!s.journal || typeof s.journal !== "object" || Array.isArray(s.journal)) s.journal = {};
       /* Migration aus der alten Checklisten-Version */
       if (old.checks && typeof old.checks === "object" && !old._migrated6) {
         const stepsItem = (old.checkItems || []).find(i => i.type === "steps");
@@ -820,6 +879,14 @@ function openVal(id) {
   const key = activeKey();
   const cur = id === "sleep" ? state.sleep[key] : id === "steps" ? state.steps[key] : weightOn(key);
   input.value = cur ?? "";
+  /* Platzhalter: Ø der letzten 7 Tage — schnelleres Eintragen */
+  const src = id === "sleep" ? state.sleep : id === "steps" ? state.steps : null;
+  if (src) {
+    const vals = lastNDays(7).map(k2 => src[k2]).filter(v => v > 0);
+    input.placeholder = vals.length ? "Ø " + fmtNum(vals.reduce((a, b) => a + b) / vals.length, id === "sleep" ? 1 : 0) : (cfg.label);
+  } else {
+    input.placeholder = currentWeight() != null ? "zuletzt " + fmtNum(currentWeight(), 1) : "kg";
+  }
   document.getElementById("valChips").innerHTML = cfg.chips.map(v =>
     `<button type="button" onclick="valChip(${v})">${fmtNum(v, v % 1 ? 1 : 0)}</button>`).join("");
   document.getElementById("valSheet").showModal();
@@ -894,8 +961,9 @@ function renderHeute() {
     confettiBurst();
   }
 
-  /* Eigene Ziele */
+  /* Eigene Ziele + Tagebuch */
   renderExtras();
+  renderJournal();
 
   /* Streak */
   const streak = computeStreak();
@@ -954,6 +1022,44 @@ function toggleXEdit() { xEdit = !xEdit; renderExtras(); }
 function delExtra(id) {
   state.extras = state.extras.filter(x => x.id !== id);
   save(); renderHeute();
+}
+
+/* ── Tagebuch: Stimmung + Notiz + automatische Zusammenfassung ── */
+const MOODS = ["😞", "😕", "🙂", "😄", "🔥"];
+function daySummaryAuto(key) {
+  const parts = [];
+  const w = workoutsOn(key);
+  if (w.length) parts.push(w.map(x => (WORKOUT_TYPES[x.type] || {}).ico + " " + (WORKOUT_TYPES[x.type] || {}).label + (x.min ? " " + x.min + " min" : "")).join(", "));
+  if (state.sleep[key]) parts.push("😴 " + fmtNum(state.sleep[key], state.sleep[key] % 1 ? 1 : 0) + " h");
+  if (state.steps[key]) parts.push("👟 " + fmtNum(state.steps[key]));
+  const kg = weightOn(key);
+  if (kg != null) parts.push("⚖️ " + fmtNum(kg, 1) + " kg");
+  if (state.gebete[key]) parts.push("🤲 " + state.gebete[key] + "/5");
+  if (state.supps[key]) parts.push("💊✓");
+  return parts.join(" · ");
+}
+function renderJournal() {
+  const key = activeKey();
+  const j = state.journal[key] || {};
+  document.getElementById("moodChips").innerHTML = MOODS.map((m, i) =>
+    `<button type="button" class="${j.mood === i + 1 ? "sel" : ""}" onclick="setMood(${i + 1})" aria-label="Stimmung ${i + 1} von 5">${m}</button>`).join("");
+  document.getElementById("journalText").value = j.text || "";
+  const auto = daySummaryAuto(key);
+  document.getElementById("journalAuto").textContent = auto
+    ? "Automatisch erfasst: " + auto
+    : "Die App schreibt dein Tagebuch automatisch mit, sobald du trackst.";
+}
+function setMood(m) {
+  const key = activeKey();
+  if (!state.journal[key]) state.journal[key] = {};
+  state.journal[key].mood = state.journal[key].mood === m ? null : m;
+  save(); renderJournal();
+}
+function saveJournalText(input) {
+  const key = activeKey();
+  if (!state.journal[key]) state.journal[key] = {};
+  state.journal[key].text = input.value.trim();
+  save();
 }
 
 /* ── Streak: Tage in Folge mit mindestens einem Eintrag ── */
@@ -1287,32 +1393,81 @@ function lastNDays(n) {
   return out;
 }
 function renderVerlauf() {
-  const p = state.profile;
-  const w = currentWeight();
-  const sw = startWeight();
-  const stats = document.getElementById("progressStats");
-  const dn = dayNumber(todayKey());
-  if (w != null && sw != null) {
-    const lost = sw - w;
-    const trend = weightTrend();
-    const prog = prognosis();
-    stats.innerHTML = `
-      <div class="stat"><div class="label">${dn >= 1 ? "Tag " + dn : "Warm-up"}</div>
-        <div class="value ${lost > 0 ? "hero-c" : ""}">${lost > 0 ? "−" : "+"}${fmtNum(Math.abs(lost), 1)}</div>
-        <div class="sub">kg seit Start</div></div>
-      <div class="stat"><div class="label">Trend/Woche</div>
-        <div class="value">${trend != null ? (trend <= 0 ? "−" : "+") + fmtNum(Math.abs(trend * 7), 2) : "–"}</div>
-        <div class="sub">${trend != null ? "kg (21 Tage)" : "≥ 3 Einträge nötig"}</div></div>
-      <div class="stat"><div class="label">Ziel ca.</div>
-        <div class="value">${prog ? prog.toLocaleDateString("de-DE", { day: "numeric", month: "short" }) : (p && w <= p.goal ? "🎉" : "–")}</div>
-        <div class="sub">${prog ? "nach echtem Trend" : (p && w <= p.goal ? "Ziel erreicht!" : "")}</div></div>`;
-  } else {
-    stats.innerHTML = `<div class="stat" style="grid-column:1/-1"><div class="label">Los geht's</div>
-      <div class="value">🚀</div><div class="sub">Wiege dich, dann startet deine Statistik.</div></div>`;
-  }
+  renderScore();
   renderKonsistenz();
+  renderDiary();
   renderWeekReport();
+  renderVerlaufCharts();
+  renderWeightTable();
+}
+
+/* ── Durchzieh-Score: dein „Zieh ich's durch?"-Barometer ── */
+function firstTrackedKey() {
+  let min = null;
+  const consider = d => { if (d && (!min || d < min)) min = d; };
+  state.weights.forEach(w => consider(w.date));
+  state.workouts.forEach(w => consider(w.date));
+  [state.sleep, state.steps, state.gebete, state.supps].forEach(m => Object.keys(m).forEach(consider));
+  return min;
+}
+function scoreOver(days) {
+  const first = firstTrackedKey();
+  if (!first) return null;
+  const keys = lastNDays(days).filter(k => k >= first);
+  if (!keys.length) return null;
+  let hit = 0;
+  keys.forEach(k => TRACKERS.forEach(t => { if (goalReached(t.id, k)) hit++; }));
+  return Math.round(hit / (keys.length * TRACKERS.length) * 100);
+}
+function renderScore() {
+  const card = document.getElementById("scoreCard");
+  const s30 = scoreOver(30);
+  if (s30 == null) { card.hidden = true; return; }
+  card.hidden = false;
+  const s7 = scoreOver(7);
+  const label = s30 >= 80 ? "Du ziehst durch! 🏆" : s30 >= 60 ? "Stark dabei 💪" : s30 >= 40 ? "Dranbleiben 🔁" : "Neustart — heute zählt 🌱";
+  document.getElementById("scoreVal").textContent = s30 + " %";
+  document.getElementById("scoreSub").textContent = label + " · 7 Tage: " + (s7 ?? "–") + " % · Streak " + computeStreak() + " 🔥";
+  const w = currentWeight(), sw = startWeight(), trend = weightTrend();
+  const bits = [];
+  if (w != null && sw != null) bits.push((sw - w >= 0 ? "−" : "+") + fmtNum(Math.abs(sw - w), 1) + " kg seit Start");
+  if (trend != null) bits.push("Trend " + (trend <= 0 ? "−" : "+") + fmtNum(Math.abs(trend * 7), 2) + " kg/Wo");
+  document.getElementById("scoreSub2").textContent = bits.join(" · ");
+  document.getElementById("scoreFill").setAttribute("stroke-dashoffset", (289 * (1 - s30 / 100)).toFixed(1));
+  document.getElementById("scoreRingTxt").textContent = s30 + "%";
+}
+
+/* ── Tagebuch-Feed ── */
+function renderDiary() {
+  const card = document.getElementById("diaryCard");
+  const keys = lastNDays(14).reverse();
+  const rows = keys.map(k => {
+    const j = state.journal[k] || {};
+    const auto = daySummaryAuto(k);
+    if (!auto && !j.mood && !j.text) return "";
+    const done = TRACKERS.filter(t => goalReached(t.id, k)).length;
+    const mood = j.mood ? MOODS[j.mood - 1] + " " : "";
+    return `<div class="dentry">
+      <div class="dhead"><b>${fmtDate(k, { weekday: "short", day: "2-digit", month: "2-digit" })}${k === todayKey() ? " · Heute" : ""}</b>
+        <span>${mood}${done}/6 ✓</span></div>
+      ${auto ? `<div class="dauto">${auto}</div>` : ""}
+      ${j.text ? `<div class="dnote">„${esc(j.text)}"</div>` : ""}
+    </div>`;
+  }).filter(Boolean);
+  card.hidden = !rows.length;
+  document.getElementById("diaryFeed").innerHTML = rows.join("");
+}
+
+/* ── Charts (in Aufklapp-Bereichen) ── */
+function renderVerlaufCharts() {
   drawWeightChart();
+  const prog = prognosis();
+  const trend = weightTrend();
+  const bits = [];
+  if (prog) bits.push("Ziel erreicht ca. " + prog.toLocaleDateString("de-DE", { day: "numeric", month: "long" }) + " (nach deinem echten Trend)");
+  else if (state.profile && currentWeight() != null && currentWeight() <= state.profile.goal) bits.push("Zielgewicht erreicht! 🎉");
+  if (trend != null) bits.push("Trend: " + (trend <= 0 ? "−" : "+") + fmtNum(Math.abs(trend * 7), 2) + " kg/Woche");
+  document.getElementById("progHint").textContent = bits.join(" · ");
   const days14 = lastNDays(14);
   drawBars("sleepChart", days14.map(k => ({ label: fmtDate(k), val: state.sleep[k] || 0 })),
     { target: 8, color: "var(--c-sleep)", unit: " h", decimals: 1 });
@@ -1328,7 +1483,6 @@ function renderVerlauf() {
     weeks.push({ label: fmtDate(keyOf(end)), val: count });
   }
   drawBars("woWeekChart", weeks, { color: "var(--c-train)", labelEvery: 2, unit: " Einheiten" });
-  renderWeightTable();
 }
 function renderWeekReport() {
   const card = document.getElementById("weekCard");
@@ -1445,7 +1599,7 @@ function drawWeightChart() {
 /* ── Generischer Balken-Chart ── */
 function drawBars(boxId, data, opts) {
   const box = document.getElementById(boxId);
-  const card = box.closest(".card");
+  const card = box.closest(".card, .acc");
   box.querySelectorAll("svg").forEach(s => s.remove());
   if (!data.some(d => d.val > 0)) { card.hidden = true; return; }
   card.hidden = false;
@@ -1625,6 +1779,7 @@ function openFin(type) {
   document.getElementById("finSheetTitle").textContent = type === "in" ? "＋ Einnahme" : "－ Ausgabe";
   document.getElementById("finAmount").value = "";
   document.getElementById("finNote").value = "";
+  document.getElementById("finRecur").checked = false;
   renderFinChips();
   document.getElementById("finSheet").showModal();
 }
@@ -1638,7 +1793,8 @@ function saveFin(ev) {
   const amount = parseFloat(document.getElementById("finAmount").value.replace(",", "."));
   if (!isFinite(amount) || amount <= 0) return;
   const note = document.getElementById("finNote").value.trim();
-  state.finance.push({ id: uid(), date: todayKey(), type: finType, amount: Math.round(amount * 100) / 100, cat: finCat, note });
+  const recur = document.getElementById("finRecur").checked;
+  state.finance.push({ id: uid(), date: todayKey(), type: finType, amount: Math.round(amount * 100) / 100, cat: finCat, note, recur });
   save(); closeSheet("finSheet");
   finMonth = monthKey(new Date());
   renderGeld();
@@ -1722,12 +1878,39 @@ function renderGeld() {
       <span class="fin-ico">${info.ico}</span>
       <div class="fin-main">
         <div class="fin-name">${esc(f.note || info.label)}</div>
-        <div class="fin-sub">${fmtDate(f.date, { weekday: "short", day: "2-digit", month: "2-digit" })} · ${info.label}</div>
+        <div class="fin-sub">${fmtDate(f.date, { weekday: "short", day: "2-digit", month: "2-digit" })} · ${info.label}${f.recur || f.auto ? " · 🔁 monatlich" : ""}</div>
       </div>
       <span class="fin-amt ${f.type}">${f.type === "in" ? "+" : "−"}${fmtEur(f.amount)}</span>
       <button class="del-x" aria-label="Buchung löschen" onclick="delFin('${f.id}')">×</button>
     </li>`;
   }).join("");
+}
+
+/* ── Automatische Monats-Buchungen (🔁 Abos/Gehalt) ── */
+function autoRecur() {
+  const nowM = monthKey(new Date());
+  const templates = {};
+  state.finance.forEach(f => {
+    if (!f.recur) return;
+    const k = f.type + "|" + f.cat + "|" + f.amount + "|" + (f.note || "");
+    if (!templates[k] || templates[k].date < f.date) templates[k] = f;
+  });
+  let changed = false;
+  Object.values(templates).forEach(t => {
+    let cur = t;
+    let m = cur.date.slice(0, 7);
+    while (m < nowM) {
+      const [y, mo] = m.split("-").map(Number);
+      m = monthKey(new Date(y, mo, 15)); // Folgemonat
+      cur.recur = false;
+      const copy = { id: uid(), date: m + "-01", type: cur.type, cat: cur.cat, amount: cur.amount,
+                     note: cur.note || finCatInfo(cur.cat).label, recur: true, auto: true };
+      state.finance.push(copy);
+      cur = copy;
+      changed = true;
+    }
+  });
+  if (changed) save();
 }
 
 /* ══════════════ Profil ══════════════ */
@@ -1792,6 +1975,7 @@ function resetData() {
 /* ══════════════ Start ══════════════ */
 document.getElementById("todayDate").textContent =
   new Date().toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "short" });
+autoRecur();
 renderProfil();
 renderHeute();
 let resizeTimer;

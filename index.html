@@ -279,6 +279,30 @@
   .exhist .pr { color: var(--c-gebet); font-weight: 700; }
   section[hidden] { display: none; }
 
+  /* ── Finanzen ── */
+  .finhero { text-align: center; padding: 20px 18px; }
+  .finhero .fh-label { font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .finhero .fh-saldo { font-size: 42px; font-weight: 850; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin: 4px 0; }
+  .finhero .fh-sub { display: flex; justify-content: center; gap: 18px; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .finhero .fh-sub b { font-weight: 750; }
+  .finrow2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .finrow2 button {
+    appearance: none; border: none; cursor: pointer; font: inherit; font-weight: 750; font-size: 16px;
+    border-radius: 16px; padding: 15px 10px; min-height: 54px; color: #04210f;
+  }
+  .finrow2 .fin-in { background: linear-gradient(135deg, #34e07a, #0fb56f); }
+  .finrow2 .fin-out { background: linear-gradient(135deg, #ff6482, #ff375f); color: #2b0410; }
+  ul.finlist { list-style: none; margin: 0; padding: 0; }
+  ul.finlist li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+  ul.finlist li:first-child { border-top: none; }
+  .fin-ico { font-size: 19px; width: 28px; text-align: center; flex: none; }
+  .fin-main { flex: 1; min-width: 0; }
+  .fin-name { font-weight: 600; font-size: 14.5px; }
+  .fin-sub { font-size: 12px; color: var(--muted); }
+  .fin-amt { font-variant-numeric: tabular-nums; font-weight: 750; white-space: nowrap; }
+  .fin-amt.in { color: var(--good-text); }
+  .fin-amt.out { color: var(--over); }
+
   /* ── Fotos ── */
   .fotogrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .fotogrid figure { margin: 0; position: relative; }
@@ -300,10 +324,10 @@
     border-top: 1px solid var(--hairline);
     padding-bottom: env(safe-area-inset-bottom);
   }
-  nav.bottom .inner { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); }
+  nav.bottom .inner { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(6, 1fr); }
   nav.bottom button {
     appearance: none; border: none; background: transparent; cursor: pointer;
-    font: inherit; font-size: 11.5px; font-weight: 650; color: var(--muted);
+    font: inherit; font-size: 10.5px; font-weight: 650; color: var(--muted);
     height: var(--nav-h); display: flex; flex-direction: column; align-items: center;
     justify-content: center; gap: 3px;
   }
@@ -457,6 +481,41 @@
     </div>
   </section>
 
+  <!-- ════════ TAB: GELD ════════ -->
+  <section id="tab-geld" hidden>
+    <div class="dayswitch">
+      <button type="button" onclick="shiftMonth(-1)" aria-label="Vorheriger Monat">‹</button>
+      <span id="finMonthLabel">–</span>
+      <button type="button" id="finFwd" onclick="shiftMonth(1)" aria-label="Nächster Monat" disabled>›</button>
+    </div>
+    <div class="card finhero">
+      <div class="fh-label">Saldo</div>
+      <div class="fh-saldo" id="finSaldo">0,00 €</div>
+      <div class="fh-sub">
+        <span style="color:var(--good-text)">▲ <b id="finIn">0 €</b></span>
+        <span style="color:var(--over)">▼ <b id="finOut">0 €</b></span>
+      </div>
+    </div>
+    <div class="finrow2">
+      <button class="fin-in" onclick="openFin('in')">＋ Einnahme</button>
+      <button class="fin-out" onclick="openFin('out')">－ Ausgabe</button>
+    </div>
+    <div class="card" id="finCatCard" hidden>
+      <h2>Ausgaben nach Kategorie</h2>
+      <div id="finCats"></div>
+    </div>
+    <div class="card" id="finChartCard" hidden>
+      <h2>Letzte 6 Monate</h2>
+      <div class="chartbox" id="finChart"><div class="viz-tip"></div></div>
+      <p class="hint">Saldo pro Monat (Einnahmen − Ausgaben).</p>
+    </div>
+    <div class="card">
+      <h2>Buchungen</h2>
+      <ul class="finlist" id="finList"></ul>
+      <p class="empty" id="finEmpty">Noch keine Buchungen in diesem Monat.</p>
+    </div>
+  </section>
+
   <!-- ════════ TAB: PROFIL ════════ -->
   <section id="tab-profil" hidden>
     <div class="card">
@@ -540,6 +599,22 @@
   <option value="Schrägbankdrücken"></option><option value="Crunches"></option><option value="Plank"></option>
 </datalist>
 
+<dialog class="sheet" id="finSheet">
+  <div class="sheet-inner">
+    <div class="sheet-grip"></div>
+    <h3 id="finSheetTitle">Buchung</h3>
+    <form onsubmit="saveFin(event)" style="display:flex;flex-direction:column;gap:10px">
+      <div class="field"><label for="finAmount">Betrag (€)</label>
+        <input id="finAmount" type="number" step="0.01" min="0.01" max="1000000" required inputmode="decimal" placeholder="z. B. 24,99"></div>
+      <div class="chips" id="finCatChips"></div>
+      <div class="field"><label for="finNote">Beschreibung (optional)</label>
+        <input id="finNote" placeholder="z. B. Nike TN verkauft"></div>
+      <button class="btn" type="submit">Speichern</button>
+      <button class="btn ghost" type="button" onclick="closeSheet('finSheet')">Abbrechen</button>
+    </form>
+  </div>
+</dialog>
+
 <dialog class="sheet" id="fotoView">
   <div class="sheet-inner">
     <div class="sheet-grip"></div>
@@ -567,6 +642,10 @@
       <svg viewBox="0 0 24 24"><path d="M4 8.5h3.2l1.6-2.2h6.4l1.6 2.2H20v10.2H4z"/><circle cx="12" cy="13.2" r="3.1"/></svg>
       Fotos
     </button>
+    <button id="tabbtn-geld" onclick="showTab('geld')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="6.5" width="18" height="11.5" rx="2.2"/><circle cx="12" cy="12.2" r="2.7"/><path d="M6.2 9.5h.01M17.8 15h.01"/></svg>
+      Geld
+    </button>
     <button id="tabbtn-profil" onclick="showTab('profil')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8.2" r="3.4"/><path d="M5.5 19.5c.8-3.4 3.4-5 6.5-5s5.7 1.6 6.5 5"/></svg>
       Profil
@@ -592,7 +671,8 @@ const DEFAULT_STATE = {
   supps: {},            // {date: true}
   extras: [],           // [{id, name}] eigene Tagesziele
   extrasDone: {},       // {date: {id: true}}
-  perfect: {}           // {date: true} — Konfetti nur 1× pro Tag
+  perfect: {},          // {date: true} — Konfetti nur 1× pro Tag
+  finance: []           // [{id, date, type:'in'|'out', amount, cat, note}]
 };
 
 function keyOf(d) {
@@ -625,6 +705,7 @@ function load() {
       if (!Array.isArray(s.extras)) s.extras = [];
       if (!Array.isArray(s.weights)) s.weights = [];
       if (!Array.isArray(s.workouts)) s.workouts = [];
+      if (!Array.isArray(s.finance)) s.finance = [];
       /* Migration aus der alten Checklisten-Version */
       if (old.checks && typeof old.checks === "object" && !old._migrated6) {
         const stepsItem = (old.checkItems || []).find(i => i.type === "steps");
@@ -896,7 +977,7 @@ function computeStreak() {
 
 /* ══════════════ Tabs & Sheets ══════════════ */
 function showTab(name) {
-  for (const t of ["heute", "training", "verlauf", "fotos", "profil"]) {
+  for (const t of ["heute", "training", "verlauf", "fotos", "geld", "profil"]) {
     document.getElementById("tab-" + t).hidden = (t !== name);
     document.getElementById("tabbtn-" + t).classList.toggle("active", t === name);
   }
@@ -904,6 +985,7 @@ function showTab(name) {
   if (name === "training") renderTraining();
   if (name === "verlauf") renderVerlauf();
   if (name === "fotos") renderFotos();
+  if (name === "geld") renderGeld();
   if (name === "profil") renderProfil();
 }
 function openSheet(id) {
@@ -1511,6 +1593,143 @@ async function delFoto(id) {
   if (!confirm("Dieses Foto löschen?")) return;
   await fotoDelete(id);
   renderFotos();
+}
+
+/* ══════════════ Finanzen ══════════════ */
+const FIN_CATS = {
+  in:  [["gehalt", "💼", "Gehalt"], ["verkauf", "📦", "Verkauf"], ["geschenk", "🎁", "Geschenk"], ["sonst_in", "✨", "Sonstiges"]],
+  out: [["essen", "🍔", "Essen"], ["shopping", "🛍️", "Shopping"], ["transport", "🚗", "Transport"],
+        ["fitness", "💪", "Fitness"], ["abos", "📱", "Abos"], ["sonst_out", "✨", "Sonstiges"]]
+};
+function finCatInfo(cat) {
+  for (const list of Object.values(FIN_CATS)) {
+    const hit = list.find(c => c[0] === cat);
+    if (hit) return { ico: hit[1], label: hit[2] };
+  }
+  return { ico: "✨", label: "Sonstiges" };
+}
+function fmtEur(n, decimals = 2) {
+  return fmtNum(n, decimals) + " €";
+}
+function monthKey(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
+let finMonth = monthKey(new Date());
+function shiftMonth(delta) {
+  const [y, m] = finMonth.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 15);
+  if (monthKey(d) > monthKey(new Date())) return;
+  finMonth = monthKey(d);
+  renderGeld();
+}
+let finType = "out", finCat = null;
+function openFin(type) {
+  finType = type;
+  finCat = FIN_CATS[type][0][0];
+  document.getElementById("finSheetTitle").textContent = type === "in" ? "＋ Einnahme" : "－ Ausgabe";
+  document.getElementById("finAmount").value = "";
+  document.getElementById("finNote").value = "";
+  renderFinChips();
+  document.getElementById("finSheet").showModal();
+}
+function renderFinChips() {
+  document.getElementById("finCatChips").innerHTML = FIN_CATS[finType].map(([id, ico, label]) =>
+    `<button type="button" class="${finCat === id ? "sel" : ""}" onclick="setFinCat('${id}')">${ico} ${label}</button>`).join("");
+}
+function setFinCat(id) { finCat = id; renderFinChips(); }
+function saveFin(ev) {
+  ev.preventDefault();
+  const amount = parseFloat(document.getElementById("finAmount").value.replace(",", "."));
+  if (!isFinite(amount) || amount <= 0) return;
+  const note = document.getElementById("finNote").value.trim();
+  state.finance.push({ id: uid(), date: todayKey(), type: finType, amount: Math.round(amount * 100) / 100, cat: finCat, note });
+  save(); closeSheet("finSheet");
+  finMonth = monthKey(new Date());
+  renderGeld();
+}
+function delFin(id) {
+  if (!confirm("Diese Buchung löschen?")) return;
+  state.finance = state.finance.filter(f => f.id !== id);
+  save(); renderGeld();
+}
+function renderGeld() {
+  const [y, m] = finMonth.split("-").map(Number);
+  document.getElementById("finMonthLabel").textContent =
+    new Date(y, m - 1, 15).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
+  document.getElementById("finFwd").disabled = finMonth >= monthKey(new Date());
+
+  const entries = state.finance.filter(f => f.date.slice(0, 7) === finMonth)
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+  const sumIn = entries.filter(f => f.type === "in").reduce((s2, f) => s2 + f.amount, 0);
+  const sumOut = entries.filter(f => f.type === "out").reduce((s2, f) => s2 + f.amount, 0);
+  const saldo = sumIn - sumOut;
+  const saldoEl = document.getElementById("finSaldo");
+  saldoEl.textContent = (saldo >= 0 ? "+" : "−") + fmtEur(Math.abs(saldo));
+  saldoEl.style.color = saldo >= 0 ? "var(--good-text)" : "var(--over)";
+  document.getElementById("finIn").textContent = fmtEur(sumIn, sumIn % 1 ? 2 : 0);
+  document.getElementById("finOut").textContent = fmtEur(sumOut, sumOut % 1 ? 2 : 0);
+
+  /* Ausgaben nach Kategorie */
+  const catCard = document.getElementById("finCatCard");
+  const byCat = {};
+  entries.filter(f => f.type === "out").forEach(f => { byCat[f.cat] = (byCat[f.cat] || 0) + f.amount; });
+  const cats = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+  catCard.hidden = !cats.length;
+  document.getElementById("finCats").innerHTML = cats.map(([cat, sum]) => {
+    const info = finCatInfo(cat);
+    const pct = sumOut ? Math.round(sum / sumOut * 100) : 0;
+    return `<div class="krow">
+      <span class="kico">${info.ico}</span>
+      <div class="kmain">
+        <div class="kname">${info.label}<span>${fmtEur(sum, sum % 1 ? 2 : 0)} · ${pct} %</span></div>
+        <div class="kbar"><i style="width:${pct}%;background:var(--over)"></i></div>
+      </div></div>`;
+  }).join("");
+
+  /* Saldo der letzten 6 Monate */
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(); d.setDate(15); d.setMonth(d.getMonth() - i);
+    const mk = monthKey(d);
+    const es = state.finance.filter(f => f.date.slice(0, 7) === mk);
+    const val = es.filter(f => f.type === "in").reduce((s2, f) => s2 + f.amount, 0) -
+                es.filter(f => f.type === "out").reduce((s2, f) => s2 + f.amount, 0);
+    months.push({ label: d.toLocaleDateString("de-DE", { month: "short" }), val: Math.max(0, val), raw: val });
+  }
+  const chartCard = document.getElementById("finChartCard");
+  if (months.some(x => x.raw !== 0)) {
+    chartCard.hidden = false;
+    drawBars("finChart", months.map(x => ({ label: x.label, val: Math.abs(x.raw) })),
+      { color: "var(--accent)", unit: " €", labelEvery: 1 });
+    chartCard.hidden = false;
+    /* negative Monate rot einfärben */
+    const svg = document.querySelector("#finChart svg");
+    if (svg) {
+      const paths = svg.querySelectorAll("path");
+      let pi = 0;
+      months.forEach(x => {
+        if (Math.abs(x.raw) > 0) {
+          if (paths[pi] && x.raw < 0) paths[pi].setAttribute("fill", "var(--over)");
+          pi++;
+        }
+      });
+    }
+  } else {
+    chartCard.hidden = true;
+  }
+
+  /* Buchungsliste */
+  document.getElementById("finEmpty").hidden = entries.length > 0;
+  document.getElementById("finList").innerHTML = entries.map(f => {
+    const info = finCatInfo(f.cat);
+    return `<li>
+      <span class="fin-ico">${info.ico}</span>
+      <div class="fin-main">
+        <div class="fin-name">${esc(f.note || info.label)}</div>
+        <div class="fin-sub">${fmtDate(f.date, { weekday: "short", day: "2-digit", month: "2-digit" })} · ${info.label}</div>
+      </div>
+      <span class="fin-amt ${f.type}">${f.type === "in" ? "+" : "−"}${fmtEur(f.amount)}</span>
+      <button class="del-x" aria-label="Buchung löschen" onclick="delFin('${f.id}')">×</button>
+    </li>`;
+  }).join("");
 }
 
 /* ══════════════ Profil ══════════════ */

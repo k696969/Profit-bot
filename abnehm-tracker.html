@@ -199,8 +199,14 @@
 
   /* ── Training ── */
   .exblock { border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-  .setrow { display: grid; grid-template-columns: 52px 1fr 1fr; gap: 8px; align-items: center; }
+  .setrow { display: grid; grid-template-columns: 44px 1fr 1fr 64px; gap: 8px; align-items: center; }
   .setrow .sn { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .setrow .sl {
+    font-size: 11.5px; color: var(--muted); text-align: right;
+    font-variant-numeric: tabular-nums; line-height: 1.25; white-space: nowrap;
+  }
+  .setrow .sl.up { color: var(--good-text); font-weight: 750; }
+  .setrow .sl.down { color: var(--over); font-weight: 750; }
   .lasthint { margin: 0; }
   .dotgrid { display: grid; grid-template-columns: repeat(14, 1fr); gap: 7px; }
   .dotgrid span { width: 100%; aspect-ratio: 1; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--line); }
@@ -1220,24 +1226,50 @@ function addSet(i) {
   renderExList();
 }
 function renderExList() {
-  document.getElementById("exList").innerHTML = twDraft.exercises.map((ex, i) => `
+  document.getElementById("exList").innerHTML = twDraft.exercises.map((ex, i) => {
+    const last = lastSetsFor(ex.name) || [];
+    return `
     <div class="exblock">
       <input class="exname-in" list="exNames" placeholder="Übung, z. B. Bankdrücken"
              value="${esc(ex.name || "")}" oninput="exNameInput(${i}, this)">
       <p class="hint lasthint" id="last-${i}">${lastHintHtml(i, ex.name)}</p>
       <div style="display:flex;flex-direction:column;gap:6px">
-        ${ex.sets.map((s, j) => `
+        ${ex.sets.map((s, j) => {
+          const l = last[j] || last[last.length - 1] || null;
+          const base = l ? fmtNum(l.kg, l.kg % 1 ? 1 : 0) + "×" + l.reps : "";
+          return `
           <div class="setrow">
             <span class="sn">Satz ${j + 1}</span>
-            <input class="in-reps" type="number" min="0" max="500" inputmode="numeric" placeholder="Wdh." value="${s.reps || ""}">
-            <input class="in-kg" type="number" step="0.5" min="0" max="1000" inputmode="decimal" placeholder="kg" value="${s.kg || ""}">
-          </div>`).join("")}
+            <input class="in-reps" type="number" min="0" max="500" inputmode="numeric" placeholder="Wdh." value="${s.reps || ""}" oninput="setDelta(this)">
+            <input class="in-kg" type="number" step="0.5" min="0" max="1000" inputmode="decimal" placeholder="kg" value="${s.kg || ""}" oninput="setDelta(this)">
+            <span class="sl" ${l ? `data-kg="${l.kg}" data-reps="${l.reps}" data-base="${base}" title="Letztes Training"` : ""}>${base}</span>
+          </div>`;
+        }).join("")}
       </div>
       <div style="display:flex;gap:8px">
         <button type="button" class="minibtn" onclick="addSet(${i})">＋ Satz</button>
         <button type="button" class="minibtn danger" onclick="delExercise(${i})">Übung entfernen</button>
       </div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
+  /* Delta-Pfeile für bereits vorbefüllte Werte sofort anzeigen */
+  document.querySelectorAll("#exList .in-kg").forEach(inp => setDelta(inp));
+}
+/* Live-Vergleich: aktueller Satz vs. letztes Training (▲ Steigerung / ▼ weniger) */
+function setDelta(input) {
+  const row = input.closest(".setrow");
+  const sl = row.querySelector(".sl");
+  if (!sl || !sl.dataset.base) return;
+  const kg = parseFloat((row.querySelector(".in-kg").value || "").replace(",", ".")) || 0;
+  const reps = parseInt(row.querySelector(".in-reps").value, 10) || 0;
+  const lk = parseFloat(sl.dataset.kg), lr = parseInt(sl.dataset.reps, 10);
+  sl.classList.remove("up", "down");
+  if (!kg && !reps) { sl.textContent = sl.dataset.base; return; }
+  const better = kg > lk || (kg === lk && reps > lr);
+  const worse = kg < lk || (kg === lk && reps < lr);
+  sl.textContent = sl.dataset.base + (better ? " ▲" : worse ? " ▼" : " ＝");
+  if (better) sl.classList.add("up");
+  if (worse) sl.classList.add("down");
 }
 function exNameInput(i, input) {
   twDraft.exercises[i].name = input.value.trim();

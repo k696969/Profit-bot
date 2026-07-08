@@ -1,7 +1,7 @@
 /* Wandel Service Worker — macht die App offline nutzbar.
    Navigation: erst Netz (Updates), bei offline aus dem Cache.
    Assets: erst Cache, sonst Netz. Bei Änderungen CACHE-Version erhöhen. */
-const CACHE = "wandel-v11";
+const CACHE = "wandel-v12";
 const ASSETS = ["./", "index.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", (e) => {

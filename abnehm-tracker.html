@@ -433,6 +433,11 @@
       <p class="hint" style="line-height:2"><span class="dotlegend" style="background:var(--c-train);margin-left:0"></span>Kraftsport<span class="dotlegend" style="background:#ff9f0a"></span>Kampfsport<span class="dotlegend" style="background:var(--c-steps)"></span>Cardio<span class="dotlegend" style="background:var(--muted)"></span>Sonstiges</p>
     </div>
     <p style="margin:0 0 12px"><button class="btn" style="width:100%" onclick="openSheet('trainSheet')">＋ Training eintragen</button></p>
+    <div class="card" id="plansCard" hidden>
+      <h2>📋 Meine Pläne</h2>
+      <div id="plansList"></div>
+      <p class="hint">Plan antippen → Übungen stehen drin, Gewichte & Wiederholungen sind vom letzten Mal vorausgefüllt.</p>
+    </div>
     <div class="card" id="exStatCard" hidden>
       <h2 style="color:var(--c-train)">📈 Übungs-Statistik</h2>
       <select id="exStatSel" onchange="renderExStats()" aria-label="Übung wählen"></select>
@@ -477,25 +482,25 @@
       <div id="diaryFeed"></div>
     </div>
 
-    <details class="acc" open ontoggle="if(this.open) setTimeout(renderVerlaufCharts, 40)">
+    <details class="acc" open ontoggle="if(this.open && window.renderVerlaufCharts) setTimeout(renderVerlaufCharts, 40)">
       <summary>⚖️ Gewicht</summary>
       <div class="chartbox" id="weightChart"><div class="viz-tip"></div></div>
       <p class="empty" id="weightChartEmpty" hidden>Ab 2 Gewichtseinträgen erscheint hier deine Kurve.</p>
       <p class="hint" id="progHint"></p>
     </details>
-    <details class="acc" ontoggle="if(this.open) setTimeout(renderVerlaufCharts, 40)">
+    <details class="acc" ontoggle="if(this.open && window.renderVerlaufCharts) setTimeout(renderVerlaufCharts, 40)">
       <summary>😴 Schlaf</summary>
       <div class="chartbox" id="sleepChart"><div class="viz-tip"></div></div>
     </details>
-    <details class="acc" ontoggle="if(this.open) setTimeout(renderVerlaufCharts, 40)">
+    <details class="acc" ontoggle="if(this.open && window.renderVerlaufCharts) setTimeout(renderVerlaufCharts, 40)">
       <summary>👟 Schritte</summary>
       <div class="chartbox" id="stepsChart"><div class="viz-tip"></div></div>
     </details>
-    <details class="acc" ontoggle="if(this.open) setTimeout(renderVerlaufCharts, 40)">
+    <details class="acc" ontoggle="if(this.open && window.renderVerlaufCharts) setTimeout(renderVerlaufCharts, 40)">
       <summary>🤲 Gebete</summary>
       <div class="chartbox" id="gebetChart"><div class="viz-tip"></div></div>
     </details>
-    <details class="acc" ontoggle="if(this.open) setTimeout(renderVerlaufCharts, 40)">
+    <details class="acc" ontoggle="if(this.open && window.renderVerlaufCharts) setTimeout(renderVerlaufCharts, 40)">
       <summary>🏋️ Trainings pro Woche</summary>
       <div class="chartbox" id="woWeekChart"><div class="viz-tip"></div></div>
     </details>
@@ -630,12 +635,14 @@
     <div class="sheet-grip"></div>
     <h3>Training eintragen</h3>
     <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="chips" id="twPlans"></div>
       <div class="chips" id="twType"></div>
       <div class="chips" id="twInt"></div>
       <div class="field"><label for="twMin">Dauer (min)</label>
         <input id="twMin" type="number" value="60" min="1" max="600" inputmode="numeric"></div>
       <div id="exList" style="display:flex;flex-direction:column;gap:10px"></div>
       <button type="button" class="minibtn" onclick="addExercise()">＋ Übung hinzufügen (Sätze · Wdh. · kg)</button>
+      <button type="button" class="linkbtn" onclick="savePlanFromDraft()">📋 Diese Übungen als Plan speichern</button>
       <button type="button" class="btn" onclick="saveWorkout()">Speichern</button>
       <button type="button" class="btn ghost" onclick="closeSheet('trainSheet')">Abbrechen</button>
     </div>
@@ -728,6 +735,7 @@ const DEFAULT_STATE = {
   extrasDone: {},       // {date: {id: true}}
   perfect: {},          // {date: true} — Konfetti nur 1× pro Tag
   journal: {},          // {date: {mood: 1..5, text}}
+  plans: [],            // [{id, name, type, exercises: [Übungsnamen]}]
   finance: []           // [{id, date, type, amount, cat, note, recur, auto}]
 };
 
@@ -763,6 +771,7 @@ function load() {
       if (!Array.isArray(s.workouts)) s.workouts = [];
       if (!Array.isArray(s.finance)) s.finance = [];
       if (!s.journal || typeof s.journal !== "object" || Array.isArray(s.journal)) s.journal = {};
+      if (!Array.isArray(s.plans)) s.plans = [];
       /* Migration aus der alten Checklisten-Version */
       if (old.checks && typeof old.checks === "object" && !old._migrated6) {
         const stepsItem = (old.checkItems || []).find(i => i.type === "steps");
@@ -1113,6 +1122,66 @@ function initWorkoutSheet() {
   document.getElementById("twMin").value = 60;
   document.getElementById("exList").innerHTML = "";
   renderTwType();
+  renderTwPlans();
+}
+function renderTwPlans() {
+  document.getElementById("twPlans").innerHTML = state.plans.map(p =>
+    `<button type="button" onclick="applyPlan('${p.id}')">📋 ${esc(p.name)}</button>`).join("");
+}
+/* Letzte Sätze einer Übung (Wdh. + kg) — fürs Vorausfüllen */
+function lastSetsFor(name) {
+  const n = (name || "").toLowerCase();
+  if (!n) return null;
+  for (let i = state.workouts.length - 1; i >= 0; i--) {
+    if (state.workouts[i].date === activeKey()) continue;
+    const ex = (state.workouts[i].exercises || []).find(e => e.name.toLowerCase() === n);
+    if (ex && ex.sets.length) return ex.sets.map(x => ({ reps: x.reps, kg: x.kg }));
+  }
+  return null;
+}
+function applyPlan(id) {
+  const p = state.plans.find(x => x.id === id);
+  if (!p) return;
+  twDraft.type = p.type || "kraft";
+  twDraft.exercises = p.exercises.map(name => ({
+    name,
+    sets: lastSetsFor(name) || [{ reps: "", kg: "" }, { reps: "", kg: "" }, { reps: "", kg: "" }]
+  }));
+  renderTwType();
+  renderExList();
+}
+function savePlanFromDraft() {
+  syncDraft();
+  const names = twDraft.exercises.map(e => e.name).filter(Boolean);
+  if (!names.length) { alert("Füge zuerst Übungen hinzu — dann kannst du sie als Plan speichern."); return; }
+  const name = prompt("Name des Plans (z. B. Push Day, Pull Day, Beine):");
+  if (!name || !name.trim()) return;
+  state.plans.push({ id: uid(), name: name.trim(), type: twDraft.type, exercises: names });
+  save(); renderTwPlans();
+  if (!document.getElementById("tab-training").hidden) renderTraining();
+}
+function startPlan(id) {
+  openSheet("trainSheet");
+  applyPlan(id);
+}
+function delPlan(id) {
+  if (!confirm("Diesen Plan löschen? (Deine Trainings bleiben erhalten.)")) return;
+  state.plans = state.plans.filter(p => p.id !== id);
+  save(); renderTraining();
+}
+function renderPlansCard() {
+  const card = document.getElementById("plansCard");
+  card.hidden = !state.plans.length;
+  document.getElementById("plansList").innerHTML = state.plans.map(p => `
+    <div class="krow">
+      <span class="kico">${(WORKOUT_TYPES[p.type] || WORKOUT_TYPES.kraft).ico}</span>
+      <div class="kmain">
+        <div class="kname">${esc(p.name)}<span>${p.exercises.length} Übungen</span></div>
+        <div class="hint" style="margin:2px 0 0">${p.exercises.map(esc).join(" · ")}</div>
+      </div>
+      <button type="button" class="minibtn" onclick="startPlan('${p.id}')">Start</button>
+      <button type="button" class="del-x" aria-label="Plan löschen" onclick="delPlan('${p.id}')">×</button>
+    </div>`).join("");
 }
 function renderTwType() {
   document.getElementById("twType").innerHTML = Object.entries(WORKOUT_TYPES).map(([k, t]) =>
@@ -1155,7 +1224,7 @@ function renderExList() {
     <div class="exblock">
       <input class="exname-in" list="exNames" placeholder="Übung, z. B. Bankdrücken"
              value="${esc(ex.name || "")}" oninput="exNameInput(${i}, this)">
-      <p class="hint lasthint" id="last-${i}">${lastTimeText(ex.name)}</p>
+      <p class="hint lasthint" id="last-${i}">${lastHintHtml(i, ex.name)}</p>
       <div style="display:flex;flex-direction:column;gap:6px">
         ${ex.sets.map((s, j) => `
           <div class="setrow">
@@ -1172,7 +1241,19 @@ function renderExList() {
 }
 function exNameInput(i, input) {
   twDraft.exercises[i].name = input.value.trim();
-  document.getElementById("last-" + i).innerHTML = lastTimeText(input.value.trim());
+  document.getElementById("last-" + i).innerHTML = lastHintHtml(i, input.value.trim());
+}
+function lastHintHtml(i, name) {
+  const txt = lastTimeText(name);
+  if (!txt) return "";
+  return txt + ` <button type="button" class="linkbtn" onclick="fillLast(${i})">→ übernehmen</button>`;
+}
+function fillLast(i) {
+  syncDraft();
+  const sets = lastSetsFor(twDraft.exercises[i].name);
+  if (!sets) return;
+  twDraft.exercises[i].sets = sets;
+  renderExList();
 }
 function lastTimeText(name) {
   if (!name) return "";
@@ -1227,6 +1308,7 @@ function renderTraining() {
   document.getElementById("dotGrid").innerHTML = last28.map(k =>
     `<span class="${byDate[k] ? "t-" + byDate[k] : ""}" title="${fmtDate(k)}"></span>`).join("");
 
+  renderPlansCard();
   renderExStats();
   const list = [...state.workouts].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 30);
   document.getElementById("workoutEmpty").hidden = list.length > 0;

@@ -286,6 +286,31 @@
   .dauto { font-size: 13px; color: var(--ink-2); margin-top: 3px; line-height: 1.55; }
   .dnote { font-size: 14.5px; margin-top: 5px; font-style: italic; }
 
+  /* ── Evidenz & Wissen ── */
+  .ev {
+    display: inline-block; font-size: 10.5px; font-weight: 800; border-radius: 6px;
+    padding: 1px 6px; margin-left: 6px; vertical-align: 1px; letter-spacing: 0.02em;
+  }
+  .ev-A { background: rgba(48,209,88,.2); color: #7ce8a4; }
+  .ev-B { background: rgba(100,210,255,.18); color: #9fdfff; }
+  .ev-C { background: rgba(191,90,242,.18); color: #d9a8f7; }
+  .ev-D { background: rgba(255,214,10,.16); color: #ffe27a; }
+  .ev-E { background: rgba(142,142,147,.22); color: #c7c7cc; }
+  .kb { font-size: 14px; color: var(--ink-2); line-height: 1.6; }
+  .kb b { color: var(--ink); }
+  .kb .src { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .kb ul { margin: 6px 0; padding-left: 18px; }
+  .kb li { margin: 5px 0; }
+  .infogrid { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 13.5px; margin: 10px 0; }
+  .infogrid dt { color: var(--muted); font-weight: 650; white-space: nowrap; }
+  .infogrid dd { margin: 0; color: var(--ink-2); }
+  .planrow { border-top: 1px solid var(--line); padding: 10px 0; }
+  .planrow:first-child { border-top: none; }
+  .planrow .pr-name { font-weight: 750; font-size: 15px; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .planrow .pr-rx { font-size: 12.5px; color: var(--c-train); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .planrow .pr-sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  a.ext { color: var(--accent-deep); text-underline-offset: 2px; }
+
   /* ── Konsistenz ── */
   .krow { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
   .krow:first-of-type { border-top: none; }
@@ -434,6 +459,12 @@
 
   <!-- ════════ TAB: TRAINING ════════ -->
   <section id="tab-training" hidden>
+    <div class="chips" id="twSubNav" style="margin-bottom:12px"></div>
+    <div id="tw-log">
+    <div class="card" id="weekplanCard" hidden>
+      <h2>📅 Wochenrhythmus</h2>
+      <div id="weekplanList"></div>
+    </div>
     <div class="statrow" id="twStats"></div>
     <div class="card">
       <h2>Letzte 4 Wochen</h2>
@@ -456,6 +487,11 @@
     </div>
     <div id="workoutList"></div>
     <p class="empty" id="workoutEmpty" style="padding:0 4px">Noch keine Einheiten — trag dein erstes Training ein! 🏋️</p>
+    </div>
+    <div id="tw-plaene" hidden></div>
+    <div id="tw-uebungen" hidden></div>
+    <div id="tw-analyse" hidden></div>
+    <div id="tw-wissen" hidden></div>
   </section>
 
   <!-- ════════ TAB: STATISTIK ════════ -->
@@ -664,6 +700,12 @@
   <option value="Beinstrecker"></option><option value="Beinbeuger"></option><option value="Ausfallschritte"></option>
   <option value="Hip Thrust"></option><option value="Seitheben"></option><option value="Wadenheben"></option>
   <option value="Schrägbankdrücken"></option><option value="Crunches"></option><option value="Plank"></option>
+  <option value="Hyperextensions"></option><option value="Hammer Curls"></option><option value="Butterfly"></option>
+  <option value="Reverse Butterfly"></option><option value="Schulterdrücken (Kurzhantel)"></option>
+  <option value="Bizeps-Curls (Kurzhantel)"></option><option value="Rudern (Kurzhantel)"></option>
+  <option value="Push Press"></option><option value="Trap Bar Kreuzheben"></option>
+  <option value="Medizinball-Slams"></option><option value="Box Jumps"></option>
+  <option value="Pallof Press"></option><option value="Hängendes Beinheben"></option><option value="Farmer's Walk"></option>
 </datalist>
 
 <dialog class="sheet" id="finSheet">
@@ -682,6 +724,14 @@
       <button class="btn" type="submit">Speichern</button>
       <button class="btn ghost" type="button" onclick="closeSheet('finSheet')">Abbrechen</button>
     </form>
+  </div>
+</dialog>
+
+<dialog class="sheet" id="infoSheet">
+  <div class="sheet-inner" style="max-height:82vh;overflow-y:auto">
+    <div class="sheet-grip"></div>
+    <div id="infoBody"></div>
+    <button class="btn ghost" style="width:100%;margin-top:12px" onclick="closeSheet('infoSheet')">Schließen</button>
   </div>
 </dialog>
 
@@ -743,7 +793,9 @@ const DEFAULT_STATE = {
   extrasDone: {},       // {date: {id: true}}
   perfect: {},          // {date: true} — Konfetti nur 1× pro Tag
   journal: {},          // {date: {mood: 1..5, text}}
-  plans: [],            // [{id, name, type, exercises: [Übungsnamen]}]
+  plans: [],            // [{id, name, type, exercises: [Namen oder {name, sets, reps}]}]
+  exNotes: {},          // {übungsname_klein: eigene Notiz}
+  weekplan: [],         // [[Tag, Aktivität, Zeit], …] — Wochenrhythmus
   finance: []           // [{id, date, type, amount, cat, note, recur, auto}]
 };
 
@@ -780,6 +832,8 @@ function load() {
       if (!Array.isArray(s.finance)) s.finance = [];
       if (!s.journal || typeof s.journal !== "object" || Array.isArray(s.journal)) s.journal = {};
       if (!Array.isArray(s.plans)) s.plans = [];
+      if (!s.exNotes || typeof s.exNotes !== "object" || Array.isArray(s.exNotes)) s.exNotes = {};
+      if (!Array.isArray(s.weekplan)) s.weekplan = [];
       /* Migration aus der alten Checklisten-Version */
       if (old.checks && typeof old.checks === "object" && !old._migrated6) {
         const stepsItem = (old.checkItems || []).find(i => i.type === "steps");
@@ -1147,20 +1201,22 @@ function lastSetsFor(name) {
   }
   return null;
 }
+function planExName(e) { return typeof e === "string" ? e : e.name; }
 function applyPlan(id) {
   const p = state.plans.find(x => x.id === id);
   if (!p) return;
   twDraft.type = p.type || "kraft";
-  twDraft.exercises = p.exercises.map(name => ({
-    name,
-    sets: lastSetsFor(name) || [{ reps: "", kg: "" }, { reps: "", kg: "" }, { reps: "", kg: "" }]
-  }));
+  twDraft.exercises = p.exercises.map(e => {
+    const name = planExName(e);
+    const n = (typeof e === "object" && e.sets) ? e.sets : 3;
+    return { name, sets: lastSetsFor(name) || Array.from({ length: n }, () => ({ reps: "", kg: "" })) };
+  });
   renderTwType();
   renderExList();
 }
 function savePlanFromDraft() {
   syncDraft();
-  const names = twDraft.exercises.map(e => e.name).filter(Boolean);
+  const names = twDraft.exercises.filter(e => e.name).map(e => ({ name: e.name, sets: e.sets.length || 3, reps: "" }));
   if (!names.length) { alert("Füge zuerst Übungen hinzu — dann kannst du sie als Plan speichern."); return; }
   const name = prompt("Name des Plans (z. B. Push Day, Pull Day, Beine):");
   if (!name || !name.trim()) return;
@@ -1185,7 +1241,7 @@ function renderPlansCard() {
       <span class="kico">${(WORKOUT_TYPES[p.type] || WORKOUT_TYPES.kraft).ico}</span>
       <div class="kmain">
         <div class="kname">${esc(p.name)}<span>${p.exercises.length} Übungen</span></div>
-        <div class="hint" style="margin:2px 0 0">${p.exercises.map(esc).join(" · ")}</div>
+        <div class="hint" style="margin:2px 0 0">${p.exercises.map(e => typeof e === "string" ? esc(e) : esc(e.name) + " " + e.sets + "×" + esc(e.reps)).join(" · ")}</div>
       </div>
       <button type="button" class="minibtn" onclick="startPlan('${p.id}')">Start</button>
       <button type="button" class="del-x" aria-label="Plan löschen" onclick="delPlan('${p.id}')">×</button>
@@ -1323,6 +1379,8 @@ function delWorkout(id) {
   save(); renderTraining(); renderHeute();
 }
 function renderTraining() {
+  renderTwSub();
+  renderWeekplan();
   const now = new Date();
   const last7 = [], last28 = [];
   for (let i = 27; i >= 0; i--) {
@@ -2088,9 +2146,574 @@ function resetData() {
   showTab("profil");
 }
 
+
+/* ══════════════════════════════════════════════════════════════
+   TRAINING WISSEN & ANALYSE — evidenzbasiert
+   Evidenzgrade: A Meta-Analyse/Leitlinie · B Systematischer Review ·
+   C RCT · D Beobachtung/EMG · E Expertenmeinung/Modell
+   Quellen als PubMed-Suchlinks (immer gültig, nichts erfunden).
+   ══════════════════════════════════════════════════════════════ */
+function pm(q) { return "https://pubmed.ncbi.nlm.nih.gov/?term=" + encodeURIComponent(q); }
+function yt(q) { return "https://www.youtube.com/results?search_query=" + encodeURIComponent(q); }
+function evB(g) { return `<span class="ev ev-${g}" title="${({A:"Meta-Analyse/Leitlinie",B:"Systematischer Review",C:"RCT",D:"Beobachtung/EMG",E:"Expertenmeinung/Modell"})[g]}">${g}</span>`; }
+function srcLink(label, q) { return `<a class="ext" target="_blank" rel="noopener" href="${pm(q)}">${label}</a>`; }
+
+/* ── 1) Trainingswissenschaft (Glossar) ── */
+const WISSENSCHAFT = [
+["Progressive Overload","A","Der Kernmechanismus: Belastung (Gewicht, Wdh., Sätze) muss über Zeit steigen, sonst kein neuer Reiz. Grundlage aller Progressionsmodelle.","ACSM Position Stand 2009","ACSM progression models resistance training 2009"],
+["RIR (Reps in Reserve)","B","Wie viele saubere Wdh. du noch könntest. 1–3 RIR reicht für Hypertrophie fast genauso wie Versagen, ermüdet aber deutlich weniger. Anfänger unterschätzen ihr RIR oft um 1–2.","Helms 2016; Refalo 2023","Refalo proximity to failure hypertrophy meta-analysis"],
+["RPE (Rating of Perceived Exertion)","B","Anstrengungs-Skala 1–10; im Kraftsport als RPE = 10 − RIR genutzt (RPE 8 = 2 RIR). Gut zur Steuerung, wenn Prozent-Angaben nicht passen.","Helms 2016 (RIR-basierte RPE-Skala)","Helms RPE resistance training reps in reserve"],
+["Deload","E","Geplante leichte Woche (~50 % Volumen, −10–20 % Last) zum Abbau von Ermüdung. Direkte Studienlage dünn — Timing ist Praxiswissen: alle 4–8 Wochen oder bei Plateau/Symptomen. <i>Evidenz unsicher.</i>","Bell 2022 (Scoping Review)","deload resistance training scoping review"],
+["Trainingsvolumen","A","Wichtigster steuerbarer Faktor für Muskelaufbau: mehr harte Sätze/Woche = mehr Wachstum (Dosis-Wirkung), mit abnehmendem Ertrag. Richtwert 10–20 Sätze/Muskel/Woche.","Schoenfeld, Ogborn & Krieger 2017","Schoenfeld dose-response weekly sets hypertrophy meta-analysis"],
+["Trainingsfrequenz","A","Bei gleichem Wochenvolumen ist die Verteilung (1× vs. 3×/Woche pro Muskel) zweitrangig. 2×/Woche pro Muskel ist praktisch, um Volumen mit guter Qualität unterzubringen.","Schoenfeld 2016/2019","Schoenfeld training frequency hypertrophy meta-analysis"],
+["Trainingsintensität (Last)","A","Schwer (>60 % 1RM) und leicht bauen ähnlich viel Muskel auf, wenn nahe ans Versagen trainiert wird. Für Maximalkraft sind schwere Lasten überlegen.","Schoenfeld 2017 (Load-Meta)","Schoenfeld low load high load hypertrophy meta-analysis"],
+["Satzpausen","B","Bei Mehrgelenksübungen ≥2 min pausieren — kurze Pausen (<60 s) kosten Volumen und damit Wachstum. Isolationsübungen: 1–2 min okay.","Grgic 2018; Schoenfeld 2015 RCT","Grgic rest interval resistance training hypertrophy review"],
+["Time Under Tension","A","Wdh.-Dauer von 0,5–8 s führt zu ähnlicher Hypertrophie. Kontrolliert senken reicht — extra langsam bringt nichts, superlangsam (>10 s) ist schlechter.","Schoenfeld 2015 (Rep-Duration-Meta)","Schoenfeld repetition duration hypertrophy meta-analysis"],
+["Range of Motion","B","Volle Bewegungsamplitude ist Teil-ROM meist überlegen; neuere RCTs zeigen: besonders die gedehnte Position ist wachstumsstark (lengthened partials — <i>junge Evidenz</i>).","Pallarés 2021; neuere RCTs","range of motion resistance training hypertrophy systematic review"],
+["Muskelversagen","A","Nicht nötig: Training bis 0 RIR bringt kaum mehr Hypertrophie als 1–3 RIR, kostet aber viel Erholung. Gezielt einsetzbar bei Isolationsübungen im letzten Satz.","Refalo 2023; Grgic 2022","training to failure versus non-failure meta-analysis"],
+["Aufwärmen","A","Allgemein (5–10 min locker) + spezifisch verbessert Leistung und ist Standard-Empfehlung. Langes statisches Dehnen direkt vorher kann Kraft akut mindern.","Fradkin 2010; Simic 2013","warm-up performance meta-analysis Fradkin"],
+["Warm-up-Sätze","E","Vor schweren Übungen 2–4 Aufwärmsätze mit steigender Last (z. B. 40/60/80 % des Arbeitsgewichts, wenige Wdh.), ohne zu ermüden. Praxisstandard.","Praxisleitlinien","warm-up sets resistance training"],
+["Cooldown","B","Aktives Auslaufen nach dem Training beschleunigt die Erholung kaum — machen, wenn es sich gut anfühlt, aber kein Muss.","Van Hooren & Peake 2018","active cool-down recovery review Van Hooren"],
+["Mobility","B","Beweglichkeit gezielt dort trainieren, wo sie die Technik begrenzt. Krafttraining über volle ROM verbessert Beweglichkeit ähnlich gut wie Dehnen.","Afonso 2021","resistance training stretching flexibility systematic review"],
+["Recovery","A","Die großen Hebel: Schlaf (7–9 h — Schlafmangel halbiert Fettverlust und bremst Erholung), Protein, Kalorien, Stressmanagement. Gadgets sind zweitrangig.","Nedeltcheva 2010 u. a.","sleep restriction muscle recovery"],
+["Fatigue Management","E","Ermüdung sammelt sich über Wochen. Steuern über RIR, Volumen-Wellen und Deloads. Warnzeichen: Leistungsabfall, schlechter Schlaf, hoher Ruhepuls, Motivationsloch.","Praxismodell","fatigue management resistance training"],
+["MEV (Minimum Effective Volume)","E","Modell (Israetel/RP): kleinstes Volumen, das noch Wachstum auslöst (~4–8 Sätze/Muskel/Woche). Hilfreiches Denkmodell, <i>keine direkte Studienvalidierung</i>.","RP-Modell (Expertenmeinung)","minimum effective volume hypertrophy"],
+["MAV (Maximum Adaptive Volume)","E","Modell: Volumenbereich mit bestem Wachstum pro Aufwand (~10–20 Sätze). Deckt sich grob mit der Volumen-Meta-Analyse, bleibt aber ein Modell.","RP-Modell (Expertenmeinung)","maximum adaptive volume hypertrophy"],
+["MRV (Maximum Recoverable Volume)","E","Modell: Obergrenze, die du gerade noch verkraftest — individuell, abhängig von Schlaf/Kalorien/Stress. Über MRV → Leistungsabfall statt Wachstum.","RP-Modell (Expertenmeinung)","maximum recoverable volume resistance training"],
+["Stimulus-to-Fatigue-Ratio","E","Modell: Übungen nach Reiz pro Ermüdung bewerten. Beispiel: Beinpresse ermüdet weniger global als Kniebeuge bei ähnlichem Quadrizeps-Reiz. Nützliche Auswahllogik, <i>nicht direkt gemessen</i>.","Expertenmeinung","stimulus fatigue ratio exercise selection"],
+["Double Progression","E","Praxisbewährtes Schema: erst Wdh. im Zielbereich steigern (z. B. 6→10), dann Gewicht +2,5 kg und zurück auf 6. Einfach, funktioniert für die meisten am längsten.","Praxisstandard","double progression resistance training"],
+["Linear Progression","A","Jede Einheit/Woche etwas mehr Gewicht — funktioniert bei Anfängern hervorragend (schnelle neuronale Anpassung), läuft nach Monaten aus → dann Double Progression/Periodisierung.","ACSM 2009","linear progression novice resistance training"],
+["Periodisierung","A","Geplante Variation von Last/Volumen über Wochen. Für Kraft besser als monotones Training; für reine Hypertrophie ist der Vorteil kleiner.","Williams 2017 (Meta)","periodization strength meta-analysis Williams"],
+["Hypertrophie","A","Rezept: 10–20 harte Sätze/Muskel/Woche, 5–30 Wdh. nahe ans Versagen (1–3 RIR), volle ROM, progressive Steigerung, 1,6 g Protein/kg, ausreichend Schlaf.","Schoenfeld-Metas; Morton 2018","resistance training hypertrophy evidence based recommendations"],
+["Maximalkraft","A","Schwere Lasten (≥80 % 1RM), 1–6 Wdh., lange Pausen (2–5 min), Übung häufig üben (spezifisch). Hypertrophie liefert langfristig das Rohmaterial.","ACSM 2009; Grgic 2018","maximal strength training load meta-analysis"],
+["Kraftausdauer","B","15–30+ Wdh., kurze Pausen. Leichte Lasten bis nah ans Versagen verbessern lokale Ausdauer; für den Alltag meist über Grundlagenkraft abgedeckt.","Schoenfeld 2021 (Loading-Review)","muscular endurance loading recommendations"],
+["Explosivität","B","Absicht zählt: konzentrisch maximal schnell bewegen (auch bei schweren Lasten) verbessert Schnellkraft. Sprünge/Würfe/KB-Swings ergänzen. Für Kampfsport zentral.","Behm & Sale 1993; Velocity-Training-Reviews","intention maximal velocity strength training"]
+];
+
+/* ── 2) Übungsdatenbank ── */
+const EXDB = {
+"Schrägbankdrücken": { ico:"🏋️", ziel:"Obere Brust", neben:"Vordere Schulter, Trizeps",
+  technik:"Bank 30–45°. Schulterblätter zusammen & runter, leichtes Hohlkreuz, Füße fest. Hantel zur oberen Brust senken (Ellbogen ~45–60°), ohne Abprallen hochdrücken.",
+  fehler:"Bank zu steil (wird Schulterdrücken) · Ellbogen flaren auf 90° · Po hebt ab · halbe ROM.",
+  studien:["EMG-Daten: 30–45° betont die obere Brust; Drückübungen insgesamt sehr gut belegt für Brust-Hypertrophie.","D","incline bench press upper pectoralis EMG"],
+  alt:"KH-Schrägbankdrücken · Schräg-Maschinendrücken · Liegestütze erhöht", video:"Schrägbankdrücken Technik Langhantel" },
+"Klimmzüge": { ico:"🧗", ziel:"Latissimus", neben:"Bizeps, hinterer Deltamuskel, Unterarme, Core",
+  technik:"Griff etwas breiter als schulterbreit. Aus dem Dead Hang: Schulterblätter nach unten ziehen, Brust zur Stange, kontrolliert ablassen (2 s).",
+  fehler:"Kippen/Schwungholen · halbe Wdh. oben · Schultern am Ohr statt aktiv nach unten.",
+  studien:["Vertikale Züge sind Standard für Lat-Entwicklung (EMG hoch); Zugkraft-Progression gut auf Muskelwachstum übertragbar.","D","pull-up latissimus EMG activation"],
+  alt:"Latzug (gleiches Muster, leichter dosierbar) · Negativ-Klimmzüge · Band-unterstützt", video:"Klimmzüge richtige Technik" },
+"Enges Rudern": { ico:"🚣", ziel:"Mittlerer Rücken (Trapez, Rhomboiden), Lat",
+  technik:"Enger Neutralgriff am Kabel/Maschine. Aufrecht bleiben, Zug zum Bauchnabel, Ellbogen eng am Körper, Schulterblätter aktiv zusammenziehen, langsam öffnen.",
+  fehler:"Oberkörper wirft Schwung · Schultern ziehen hoch · nur Arme statt Schulterblätter.",
+  studien:["Horizontale Züge ergänzen vertikale: mehr mittlerer Trapez/Rhomboiden (EMG). Kombination beider Zugrichtungen ist Standardempfehlung.","D","seated row trapezius rhomboids EMG"],
+  alt:"Langhantelrudern · KH-Rudern einarmig · Brustgestütztes Rudern", video:"Enges Rudern Kabel Technik" },
+"Dips": { ico:"💪", ziel:"Untere Brust, Trizeps", neben:"Vordere Schulter",
+  technik:"Leicht vorgelehnt für Brust, aufrecht für Trizeps. Absenken bis Oberarm ~parallel, Ellbogen zeigen nach hinten, kraftvoll hochdrücken.",
+  fehler:"Zu tief/unkontrolliert (Schulterstress) · Schultern hochgezogen · nur halbe Tiefe.",
+  studien:["Hohe Aktivierung von Brust & Trizeps (EMG); gut steigerbar mit Zusatzgewicht — solide Progressionsübung.","D","dips triceps pectoralis EMG"],
+  alt:"Bankdrücken eng · Maschinen-Dips · Liegestütze mit Zusatzlast", video:"Dips richtige Ausführung Brust" },
+"Seitheben": { ico:"🦅", ziel:"Seitliche Schulter", neben:"Trapez (oben)",
+  technik:"Leicht vorgebeugt, Ellbogen minimal gebeugt. Bis ~Schulterhöhe heben (Ellbogen führt), Daumen nicht stark nach unten drehen, betont langsam ablassen.",
+  fehler:"Schwung aus dem Rumpf · zu schwer (Trapez übernimmt) · über Schulterhöhe reißen.",
+  studien:["Seitheben isoliert die seitliche Schulter am besten (EMG); hohe Wdh. (12–20+) nahe RIR 0–1 funktionieren hier gut.","D","lateral raise deltoid EMG"],
+  alt:"Kabel-Seitheben (konstante Spannung) · Maschine · Upright Row breit", video:"Seitheben perfekte Technik" },
+"Reverse Pec Deck": { ico:"🔙", ziel:"Hintere Schulter", neben:"Rhomboiden, mittlerer Trapez",
+  technik:"Brust ans Polster, Arme fast gestreckt, Bogen nach hinten-außen bis in Verlängerung der Schulter, Schulterblätter erst am Ende zusammen. 1–2 s halten.",
+  fehler:"Zu schwer → Rücken übernimmt · Arme beugen (wird Rudern) · Bewegung ohne Kontrolle.",
+  studien:["Hintere Schulter ist bei reinen Drück-Programmen unterentwickelt; Reverse Flys zeigen dort die höchste gezielte Aktivierung (EMG).","D","reverse fly posterior deltoid EMG"],
+  alt:"Butterfly Reverse KH vorgebeugt · Face Pulls · Kabel Reverse Fly", video:"Reverse Pec Deck Ausführung" },
+"SZ-Curls": { ico:"💪", ziel:"Bizeps", neben:"Brachialis, Unterarm",
+  technik:"SZ-Stange schulterbreit, Ellbogen am Körper fixiert. Ohne Schwung curlen, oben kurz anspannen, 2–3 s exzentrisch ablassen — die Streckung nicht abkürzen.",
+  fehler:"Ellbogen wandern vor · Schwung aus Hüfte · nur obere Hälfte der Bewegung.",
+  studien:["Curl-Varianten aktivieren den Bizeps ähnlich stark; SZ-Stange ist handgelenkschonender als die gerade Stange. Volle Streckung (gedehnte Position) scheint vorteilhaft.","D","biceps curl EZ bar EMG"],
+  alt:"KH-Curls · Hammer Curls (Brachialis) · Kabel-Curls", video:"SZ Curls richtig ausführen" },
+"Trizeps Seil": { ico:"🪢", ziel:"Trizeps (alle Köpfe)", neben:"—",
+  technik:"Am Kabelzug, Ellbogen fest am Körper. Seil nach unten drücken und am Ende auseinanderziehen, volle Streckung, kontrolliert zurück ohne Ellbogen-Wandern.",
+  fehler:"Ellbogen heben ab · Oberkörper drückt mit · keine volle Streckung.",
+  studien:["Kabel-Extensions sind Standard-Isolation; Overhead-Varianten dehnen den langen Kopf stärker — nach neuer Evidenz ein Plus fürs Wachstum (<i>junge RCTs</i>).","C","overhead triceps extension long head hypertrophy"],
+  alt:"Overhead-Trizepsdrücken Seil · Stirndrücken SZ · enges Bankdrücken", video:"Trizepsdrücken Seil Kabelzug Technik" },
+"Beinpresse": { ico:"🦵", ziel:"Quadrizeps", neben:"Gesäß, Beinbeuger (leicht)",
+  technik:"Füße schulterbreit mittig. Tief ablassen (so weit der untere Rücken am Polster bleibt), Knie in Fußrichtung, ohne Durchstrecken-Knallen hochdrücken.",
+  fehler:"Po rollt vom Polster (Rundrücken) · zu kleine ROM mit zu viel Gewicht · Knie kollabieren nach innen.",
+  studien:["Ähnliche Quadrizeps-Hypertrophie wie Kniebeugen bei geringerer Systemermüdung — ideal als Volumen-Übung.","C","leg press squat quadriceps hypertrophy comparison"],
+  alt:"Goblet Squat · Kniebeuge · Hackenschmidt", video:"Beinpresse richtige Fussposition Technik" },
+"Beinstrecker": { ico:"🦵", ziel:"Quadrizeps (v. a. Rectus femoris)", neben:"—",
+  technik:"Drehpunkt der Maschine auf Kniehöhe. Kontrolliert strecken, oben 1 s halten, langsam ablassen — kein Fallenlassen.",
+  fehler:"Reißen/Schwung · Hüfte hebt vom Sitz ab · nur Teilstreckung.",
+  studien:["Der Rectus femoris wird bei Kniebeugen/Presse kaum getroffen — der Strecker füllt genau diese Lücke (MRT/EMG-Daten).","D","leg extension rectus femoris hypertrophy EMG"],
+  alt:"Sissy Squat · Ausfallschritte (teilweise) · Front Squat", video:"Beinstrecker Maschine Ausführung" },
+"Beinbeuger": { ico:"🦵", ziel:"Hamstrings", neben:"Waden (leicht)",
+  technik:"Liegend/sitzend, Drehpunkt am Knie. Ferse zügig zum Po, oben anspannen, 2–3 s exzentrisch — die Exzentrik ist hier der Wachstumsreiz.",
+  fehler:"Hüfte hebt ab (Schwung) · zu schnell abgelassen · zu kleine ROM.",
+  studien:["Sitzende Variante (gedehnte Hamstrings) baute im direkten RCT mehr Muskel auf als liegend — Dehnposition zählt.","C","seated versus lying leg curl hamstrings hypertrophy"],
+  alt:"Rumänisches Kreuzheben · Nordic Curls · Hip Thrust (Gesäß-Fokus)", video:"Beinbeuger Maschine richtige Technik" },
+"Wadenheben": { ico:"🦶", ziel:"Waden (Gastrocnemius/Soleus)", neben:"—",
+  technik:"Volle Dehnung unten 1–2 s halten, dann hoch bis auf die Zehenspitzen, oben anspannen. Stehend = Gastrocnemius, sitzend = Soleus.",
+  fehler:"Federn ohne Dehnpause · halbe ROM · zu schnell.",
+  studien:["Training in der Dehnposition zeigte bei Waden deutlich mehr Wachstum (RCT) — unten Pause machen lohnt sich.","C","calf raise stretched position hypertrophy RCT"],
+  alt:"Wadenheben sitzend · einbeinig an Stufe · Beinpresse-Wadendrücken", video:"Wadenheben stehend Technik volle Dehnung" },
+"Bauch": { ico:"🧱", ziel:"Gerade & schräge Bauchmuskeln", neben:"Hüftbeuger (je nach Übung)",
+  technik:"Cable Crunch/Crunch: Wirbelsäule einrollen statt Hüfte beugen. Plank: Körper als Linie, Po & Bauch fest. Beinheben: unteren Rücken am Boden lassen.",
+  fehler:"Am Nacken ziehen · Hohlkreuz beim Beinheben · nur schnelle Mini-Wdh.",
+  studien:["Bauchmuskeln wachsen wie andere Muskeln — mit Last & Progression (z. B. Cable Crunch). 'Fettverbrennung am Bauch' durch Bauchtraining ist widerlegt.","C","abdominal training spot reduction RCT"],
+  alt:"Cable Crunch · Hanging Leg Raise · Ab-Wheel", video:"Cable Crunch richtige Ausführung" },
+"Farmer Carry": { ico:"🧳", ziel:"Griffkraft, Trapez, Core", neben:"Ganzkörper-Stabilität",
+  technik:"Schwere KH/Kettlebells, aufrecht, Schultern hinten-unten, Core fest, kontrollierte zügige Schritte 20–40 m. Nicht zur Seite kippen.",
+  fehler:"Rundrücken/Seitneigung · zu leichtes Gewicht · Trippelschritte mit Hektik.",
+  studien:["Loaded Carries verbessern Griffkraft & Rumpfstabilität; direkte Studienlage klein — v. a. Praxis-/Trainerkonsens. <i>Evidenz begrenzt.</i>","E","loaded carry farmers walk training effects"],
+  alt:"Suitcase Carry (einseitig) · Rack Carry · Schwere Shrugs", video:"Farmer Walk Carry Technik" },
+"Turkish Get-Up": { ico:"🇹🇷", ziel:"Ganzkörper: Schulterstabilität, Core", neben:"Gesäß, Beine",
+  technik:"Vom Liegen mit KB über Kopf kontrolliert zum Stand in 5 Etappen — Arm bleibt immer senkrecht, Blick zur Kugel (bis zum Stand), jede Position sauber.",
+  fehler:"Etappen hetzen · Arm knickt ein · Übung zu schwer beginnen (erst mit Schuh üben).",
+  studien:["Hohe Schulterstabilisatoren-Aktivität (EMG-Daten); als Ganzkörper-Skill v. a. durch Praxis gestützt. <i>Evidenz begrenzt.</i>","D","turkish get-up shoulder EMG"],
+  alt:"Windmill · Overhead Carry · Halber TGU", video:"Turkish Get Up Anleitung Schritt für Schritt" },
+"Kettlebell Swing": { ico:"🔔", ziel:"Gesäß, Hamstrings (Hüftstreckung explosiv)", neben:"Core, Rücken, Griff",
+  technik:"Hip Hinge, kein Squat: Hüfte lädt hinten, dann explosiv strecken — die Arme schwingen nur mit (Brusthöhe). Rücken neutral, Po am Endpunkt fest.",
+  fehler:"Aus den Armen heben · Kniebeuge statt Hüftknick · Rundrücken · Überstrecken oben.",
+  studien:["RCTs zeigen: Swing-Training verbessert Maximal- & Schnellkraft und die Hüftstreck-Leistung — beste belegte KB-Übung.","C","kettlebell swing strength power Lake Lauder"],
+  alt:"Kreuzheben · Hip Thrust · Sprünge/Broad Jumps", video:"Kettlebell Swing Technik Hip Hinge" },
+"Goblet Squat": { ico:"🏆", ziel:"Quadrizeps", neben:"Gesäß, Core, oberer Rücken",
+  technik:"KB vor der Brust (Kelchgriff), Ellbogen innen an den Knien vorbei tief in die Hocke, Brust stolz, Ferse am Boden, hoch ohne Knie-Kollaps.",
+  fehler:"Fersen heben ab · Rundrücken · Gewicht kippt vom Körper weg.",
+  studien:["Kniebeuge-Muster mit eingebautem Aufrichte-Feedback — ideal zum Lernen & für hohe Wdh.; Evidenz über das allgemeine Kniebeugen-Fundament.","B","squat variations quadriceps hypertrophy"],
+  alt:"Front Squat · Beinpresse · Ausfallschritte", video:"Goblet Squat richtige Ausführung" },
+"Clean & Press": { ico:"🚀", ziel:"Schultern, Trapez + Ganzkörper-Explosivität", neben:"Beine, Core, Trizeps",
+  technik:"KB explosiv aus dem Hip Hinge in die Rack-Position 'einfangen' (Clean, kein Umschlagen am Unterarm), dann strikt oder mit Beinschub über Kopf pressen.",
+  fehler:"KB knallt auf den Unterarm · Press mit Hohlkreuz · Clean aus dem Arm statt aus der Hüfte.",
+  studien:["Komplexübungen mit Überkopf-Anteil verbessern Kraft & Leistung; KB-spezifische Daten begrenzt, Prinzipien gut belegt. <i>Evidenz moderat.</i>","B","kettlebell clean and press training adaptations"],
+  alt:"Push Press LH · Military Press · KB Snatch", video:"Kettlebell Clean and Press Technik" },
+"Dead Hang": { ico:"🙌", ziel:"Griffkraft, Unterarme", neben:"Schulter-Dekompression, Lat-Dehnung",
+  technik:"An der Stange aushängen, Schultern aktiv (nicht komplett passiv am Ohr), ruhig atmen. 20–60 s sammeln, gern nach dem Ziehen.",
+  fehler:"Komplett passives Hängen mit Schmerz · Luft anhalten · zu früh abspringen.",
+  studien:["Griffkraft ist ein starker Gesundheits-Marker (Beobachtung); Dead Hangs als Übung dafür sind Praxiskonsens. <i>Direkte Evidenz begrenzt.</i>","D","grip strength mortality association hang"],
+  alt:"Farmer Carry · Towel Hang · Grippers", video:"Dead Hang benefits Technik" }
+};
+
+/* ── 3) Trainingspläne (Vorlagen) ── */
+const PLAENE = [
+{ name:"Ganzkörper A", ico:"🅰️", typ:"kraft", info:"Drücken horizontal + vertikaler Zug. 2–3 Aufwärmsätze vor der ersten schweren Übung.",
+  ex:[
+  ["Schrägbankdrücken","3","6–10","1–2","2–3 min","Double Progression: 3×10 schaffen → +2,5 kg, zurück auf 6"],
+  ["Klimmzüge","3","5–10","1–2","2–3 min","Alle Sätze ×10 → +2,5 kg Zusatzgewicht"],
+  ["Beinpresse","3","8–12","1–2","2–3 min","Double Progression 8→12"],
+  ["Seitheben","3","12–20","0–1","1–1,5 min","Erst Wdh. 12→20, dann kleinste Steigerung"],
+  ["SZ-Curls","2","8–12","0–1","1,5 min","Double Progression 8→12"],
+  ["Bauch","3","10–15","0–1","1 min","Cable Crunch: Gewicht steigern wie jede andere Übung"]]},
+{ name:"Ganzkörper B", ico:"🅱️", typ:"kraft", info:"Drücken vertikal-geneigt + horizontaler Zug + Beine hinten.",
+  ex:[
+  ["Dips","3","6–10","1–2","2–3 min","×10 geschafft → +2,5 kg am Gürtel"],
+  ["Enges Rudern","3","8–12","1–2","2 min","Double Progression 8→12"],
+  ["Beinbeuger","3","10–15","1","1,5–2 min","Double Progression, Exzentrik 2–3 s"],
+  ["Beinstrecker","2","12–15","0–1","1,5 min","Double Progression 12→15"],
+  ["Reverse Pec Deck","3","15–20","0–1","1–1,5 min","Wdh. zuerst, dann kleinste Stufe"],
+  ["Trizeps Seil","2","10–15","0–1","1,5 min","Double Progression 10→15"],
+  ["Wadenheben","3","10–15","0–1","1,5 min","Unten 2 s Dehnpause — dann erst zählt die Wdh."]]},
+{ name:"Kettlebell Day", ico:"🔔", typ:"kraft", info:"Explosiv → Skill → Grind. Qualität vor Erschöpfung; Pausen großzügig.",
+  ex:[
+  ["Kettlebell Swing","5","15","explosiv","1–1,5 min","Alle Sätze knackig → nächste KB-Größe"],
+  ["Goblet Squat","4","8–12","1–2","2 min","Double Progression, dann schwerere KB"],
+  ["Clean & Press","4","5 je Seite","1–2","2 min","5×5 sauber je Seite → schwerere KB"],
+  ["Turkish Get-Up","3","2 je Seite","Technik","2 min","Erst perfekte Technik, dann Gewicht"],
+  ["Farmer Carry","4","30–40 m","schwer","1,5–2 min","Strecke halten, Gewicht steigern"],
+  ["Dead Hang","3","max. Zeit","—","1,5 min","Gesamtzeit steigern (z. B. 3×40 s)"]]},
+{ name:"Kampfsport", ico:"🥊", typ:"kampf", info:"Einheit im Gym/Dojo — hier steuerst du Belastung statt Gewichte. Evidenz: sportartspezifisches Training + allgemeine Prinzipien [E].",
+  ex:[
+  ["Aufwärmen & Mobilität","1","10–15 min","locker","—","Seilspringen, Schattenboxen, Gelenke mobilisieren"],
+  ["Technik / Drills","4–6","3–5 min Runden","RPE 6–7","1 min","Neue Technik früh in der Einheit (frisch lernt besser)"],
+  ["Sparring","3–5","3–5 min Runden","RPE 7–9","1 min","Intensität bewusst wählen — nicht jedes Sparring ist ein Kampf"],
+  ["Conditioning","2–4","2–3 min","RPE 8–9","1–2 min","Intervalle: Seil, Sprints, Schläge am Sack"],
+  ["Cooldown & Dehnen","1","5–10 min","locker","—","Puls runter, kurze Dehnung — optional"]]}
+];
+
+/* ── 4) Trainingswissen (Q&A) ── */
+const WISSEN_QA = [
+["Wie baut man Muskeln auf?",[
+["10–20 harte Sätze pro Muskel und Woche — Volumen ist der stärkste Hebel.","A","Schoenfeld dose-response weekly sets hypertrophy"],
+["5–30 Wdh. funktionieren, solange du 1–3 RIR erreichst; volle ROM nutzen.","A","Schoenfeld low load high load hypertrophy meta"],
+["Progressive Steigerung: jede Woche irgendwo +1 Wdh. oder +2,5 kg (Double Progression).","E","progressive overload double progression"],
+["1,6 g Protein/kg/Tag; mehr bringt kaum Zusatznutzen.","A","Morton protein supplementation resistance training meta"],
+["7–9 h Schlaf — Schlafmangel kostet messbar Muskelerhalt & Erholung.","C","Nedeltcheva insufficient sleep adiposity"]]],
+["Wie verliert man Fett?",[
+["Kaloriendefizit ist die einzige Voraussetzung — jede Diät funktioniert nur darüber.","A","energy deficit weight loss meta-analysis"],
+["Krafttraining + hohes Protein (1,6–2,2 g/kg) erhält im Defizit die Muskeln.","A","resistance training lean mass preservation caloric restriction meta"],
+["0,5–1 % Körpergewicht pro Woche — schneller kostet überproportional Muskeln.","B","weight loss rate lean mass"],
+["Schlaf ≥7 h: im RCT halbierte Schlafmangel den Fettanteil des Gewichtsverlusts.","C","Nedeltcheva insufficient sleep dietary efforts"],
+["Punktuelles 'Wegtrainieren' (Bauchfett durch Bauchtraining) ist widerlegt.","C","spot reduction abdominal fat RCT"]]],
+["Wann Deload?",[
+["Kein fester Studien-Standard — <i>Evidenz unsicher</i>, Praxisregeln:","E","deload resistance training review"],
+["Nach 4–8 Wochen harter Progression, oder wenn 2+ Übungen stagnieren/rückläufig sind.","E",""],
+["Bei Warnzeichen: schlechter Schlaf, Dauer-Muskelkater, Lustlosigkeit, schwere Gelenke.","E",""],
+["Umsetzung: 1 Woche ~halbes Volumen, −10–20 % Last, Technik-Fokus.","E",""]]],
+["Wann Volumen erhöhen?",[
+["Erst wenn Progression bei stabiler Technik & gutem Schlaf stockt — nicht als Erstes.","E","training volume progression"],
+["+2–3 Sätze/Muskel/Woche für einen Block, dann 4–6 Wochen beobachten.","E",""],
+["Mehr ist nicht immer besser: Über deiner Erholungsgrenze (MRV-Modell) fällt Leistung.","E","maximum recoverable volume"]]],
+["Wann Gewicht erhöhen?",[
+["Double Progression: Ziel-Wdh. im letzten Satz mit ≤2 RIR geschafft → nächste Einheit +2,5 kg (Unterkörper +5 kg).","E","double progression load increase"],
+["Anfänger: linear steigern, solange es läuft — der schnellste Fortschritt deines Lebens.","A","novice linear progression strength"]]],
+["Wie funktioniert Progressive Overload?",[
+["Muskeln passen sich nur an steigende Anforderungen an — Reiz muss wachsen (Gewicht, Wdh., Sätze, ROM, Kontrolle).","A","progressive overload ACSM progression models"],
+["Praktisch: Logge jeden Satz (macht deine App) und schlage letzte Werte gezielt — dein ▲ im Trainings-Sheet.","E",""]]],
+["Wie funktioniert RIR?",[
+["RIR = Wiederholungen, die noch möglich wären. 1–3 RIR liefert ~gleiche Hypertrophie wie Versagen bei viel weniger Ermüdung.","A","Refalo proximity to failure meta-analysis"],
+["Kalibrieren: gelegentlich einen Satz bewusst bis zum technischen Versagen führen und zählen, wie viele Wdh. nach 'gefühlt 2 RIR' noch kamen.","E",""]]],
+["Wie funktioniert RPE?",[
+["RPE 1–10 = Anstrengung; im Kraftsport gilt RPE 8 ≈ 2 RIR, RPE 9 ≈ 1 RIR.","B","Helms RPE reps in reserve resistance training"],
+["Nutze RPE bei Übungen ohne klare kg-Logik (Kampfsport-Runden, Conditioning).","E",""]]],
+["Wie erkennt man Übertraining?",[
+["Echtes Übertraining ist selten — meist 'Overreaching': Leistungsabfall trotz Anstrengung über ≥2 Wochen.","B","overtraining syndrome diagnosis review"],
+["Marker: sinkende PRs, erhöhter Ruhepuls, schlechter Schlaf, Reizbarkeit, Infektanfälligkeit.","B",""],
+["Gegenmittel: Deload, Schlaf, Kalorien — nicht 'mehr Disziplin'.","E",""]]],
+["Wie erkennt man Untertraining?",[
+["Zu wenig Reiz: keine Progression, kein Muskelgefühl/leichter Pump, RIR real >4, Training fühlt sich nie fordernd an.","E","minimum effective training dose"],
+["Check: Steigen deine Log-Zahlen über 4–6 Wochen? Nein + top erholt → Volumen oder Intensität zu niedrig.","E",""]]],
+["Wie plant man einen Trainingsblock?",[
+["4–8 Wochen ein Ziel (z. B. Hypertrophie), Volumen leicht ansteigend, Woche danach Deload.","A","periodization training block meta"],
+["Innerhalb des Blocks Übungen konstant lassen — nur so ist Progression messbar.","E",""]]],
+["Wie erstellt man einen Trainingsplan?",[
+["Frequenz wählen (2–4 Einheiten), jede Muskelgruppe ~2×/Woche treffen.","A","training frequency muscle hypertrophy meta"],
+["Pro Einheit: 1–2 schwere Mehrgelenksübungen zuerst, dann Isolation; 10–20 Sätze/Muskel/Woche verteilen.","B","exercise order strength hypertrophy"],
+["Übungen wählen, die du schmerzfrei, gern und progressiv ausführen kannst — Konstanz schlägt Optimierung.","E",""]]],
+["Welche Muskelgruppen brauchen wie viele Sätze?",[
+["Startpunkt ~10–15 Sätze/Woche pro großem Muskel; kleine Muskeln (Bizeps/Trizeps/Seitschulter) bekommen viel indirekt mit — 6–10 direkte Sätze reichen oft.","B","weekly set volume per muscle group recommendations"],
+["Waden/hintere Schulter/Bauch: meist unterversorgt — bewusst einplanen.","E",""],
+["Individuell: reagierst du gut → weniger nötig; Plateau bei guter Erholung → schrittweise erhöhen. <i>Genaue Zahlen bleiben unsicher.</i>","E",""]]],
+["Welche Übungen haben die beste Evidenz?",[
+["Es gibt keine 'Pflichtübungen' — Muster zählen: Drücken horizontal/vertikal, Ziehen horizontal/vertikal, Kniebeugen-, Hüft-Muster, Core.","B","exercise selection hypertrophy review"],
+["Am besten belegt: Mehrgelenksübungen mit Steigerungspotenzial (Drücken, Klimmzug/Latzug, Presse/Kniebeuge, Rudern, Hüftstrecken).","A","multi-joint exercises strength hypertrophy meta"],
+["Maschinen vs. frei: gleiches Wachstum bei gleicher Anstrengung — nimm, was du sauber steigern kannst.","B","machine versus free weight hypertrophy"]]]
+];
+
+/* ── Sub-Navigation im Training-Tab ── */
+let twView = "log";
+function renderTwSub() {
+  const views = [["log","📒 Log"],["plaene","📋 Pläne"],["uebungen","📚 Übungen"],["analyse","🔬 Analyse"],["wissen","🧠 Wissen"]];
+  document.getElementById("twSubNav").innerHTML = views.map(([v,l]) =>
+    `<button type="button" class="${twView===v?"sel":""}" onclick="showTwView('${v}')">${l}</button>`).join("");
+  for (const [v] of views) document.getElementById("tw-" + v).hidden = (twView !== v);
+}
+function showTwView(v) {
+  twView = v;
+  renderTwSub();
+  if (v === "plaene") renderPlaeneView();
+  if (v === "uebungen") renderUebungenView();
+  if (v === "analyse") renderAnalyseView();
+  if (v === "wissen") renderWissenView();
+  window.scrollTo(0, 0);
+}
+
+/* ── PRs & Notizen je Übung ── */
+function prFor(name) {
+  const sess = exSessions(name);
+  if (!sess.length) return null;
+  let best = null;
+  sess.forEach(s2 => s2.sets.forEach(x => { if (!best || x.kg > best.kg) best = { kg: x.kg, reps: x.reps, date: s2.date }; }));
+  return { best, sessions: sess.length, last: sess[sess.length - 1] };
+}
+
+/* ── Ansicht: Pläne (Vorlagen) ── */
+function renderPlaeneView() {
+  document.getElementById("tw-plaene").innerHTML =
+    `<p class="hint" style="margin:0 0 12px">Evidenzbasierte Vorlagen. „Übernehmen" legt den Plan in <b>Meine Pläne</b> — beim Start sind deine letzten Werte vorausgefüllt. Übung antippen = Details.</p>` +
+    PLAENE.map((p, pi) => `
+    <div class="card">
+      <h2>${p.ico} ${p.name}</h2>
+      <p class="hint" style="margin:0 0 8px">${p.info}</p>
+      ${p.ex.map(e => {
+        const db = EXDB[e[0]];
+        const pr = db ? prFor(e[0]) : null;
+        return `<div class="planrow">
+          <div class="pr-name">${db ? `<a href="#" style="color:var(--ink);text-decoration:underline;text-underline-offset:3px" onclick="openExInfo('${e[0].replace(/'/g,"\\'")}');return false">${e[0]}</a>` : e[0]}
+            <span class="pr-rx">${e[1]} × ${e[2]}${e[3] && e[3] !== "—" ? " · RIR " + e[3] : ""}</span></div>
+          <div class="pr-sub">Pause ${e[4]} · ${e[5]}${pr && pr.best ? ` · <b style="color:var(--c-gebet)">PR ${fmtNum(pr.best.kg, pr.best.kg % 1 ? 1 : 0)} kg × ${pr.best.reps}</b>` : ""}</div>
+        </div>`;
+      }).join("")}
+      ${p.typ === "kraft" ? `<button class="btn" style="width:100%;margin-top:12px" onclick="adoptPlan(${pi})">📋 Als „Mein Plan" übernehmen</button>` : ""}
+    </div>`).join("");
+}
+function adoptPlan(pi) {
+  const p = PLAENE[pi];
+  const names = p.ex.map(e => e[0]).filter(n => EXDB[n]);
+  if (state.plans.some(x => x.name === p.name)) { alert("\u201E" + p.name + "\u201C ist schon in deinen Pl\u00E4nen."); return; }
+  state.plans.push({ id: uid(), name: p.name, type: p.typ, exercises: names });
+  save();
+  alert("\u201E" + p.name + "\u201C ist jetzt unter Log \u2192 Meine Pl\u00E4ne. Beim Start sind deine letzten Werte vorausgef\u00FCllt.");
+}
+
+/* ── Ansicht: Übungsdatenbank ── */
+function renderUebungenView() {
+  document.getElementById("tw-uebungen").innerHTML =
+    `<p class="hint" style="margin:0 0 12px">Antippen für Technik, Studienlage, Alternativen, deine PRs & Notizen.</p>` +
+    `<div class="card">` + Object.entries(EXDB).map(([name, db]) => {
+      const pr = prFor(name);
+      return `<div class="planrow" style="cursor:pointer" onclick="openExInfo('${name.replace(/'/g,"\\'")}')">
+        <div class="pr-name">${db.ico} ${name}
+          <span class="pr-rx">${pr && pr.best ? "PR " + fmtNum(pr.best.kg, pr.best.kg % 1 ? 1 : 0) + " kg" : "—"}</span></div>
+        <div class="pr-sub">${db.ziel}${state.exNotes[name.toLowerCase()] ? " · 📝 Notiz" : ""}</div>
+      </div>`;
+    }).join("") + `</div>`;
+}
+function openExInfo(name) {
+  const db = EXDB[name];
+  if (!db) return;
+  const pr = prFor(name);
+  const note = state.exNotes[name.toLowerCase()] || "";
+  document.getElementById("infoBody").innerHTML = `
+    <h3>${db.ico} ${name}</h3>
+    <dl class="infogrid">
+      <dt>Zielmuskel</dt><dd>${db.ziel}</dd>
+      <dt>Nebenziele</dt><dd>${db.neben}</dd>
+      <dt>Technik</dt><dd>${db.technik}</dd>
+      <dt>Häufige Fehler</dt><dd>${db.fehler}</dd>
+      <dt>Studienlage</dt><dd>${db.studien[0]} ${evB(db.studien[1])}<span class="src">${srcLink("→ PubMed-Suche", db.studien[2])}</span></dd>
+      <dt>Alternativen</dt><dd>${db.alt}</dd>
+      <dt>Video</dt><dd><a class="ext" target="_blank" rel="noopener" href="${yt(db.video)}">▶ YouTube-Suche: Technik</a></dd>
+      <dt>Deine PRs</dt><dd>${pr && pr.best
+        ? `<b style="color:var(--c-gebet)">${fmtNum(pr.best.kg, pr.best.kg % 1 ? 1 : 0)} kg × ${pr.best.reps}</b> (${fmtDate(pr.best.date)}) · ${pr.sessions} Einheiten · zuletzt ${fmtDate(pr.last.date)}`
+        : "Noch keine Einträge — leg los! 💪"}</dd>
+    </dl>
+    <div class="field"><label>📝 Deine Notizen (Sitzhöhe, Griff, Cues …)</label>
+      <input value="${esc(note)}" onchange="saveExNote('${name.replace(/'/g,"\\'")}', this)"></div>`;
+  document.getElementById("infoSheet").showModal();
+}
+function saveExNote(name, input) {
+  state.exNotes[name.toLowerCase()] = input.value.trim();
+  save();
+}
+
+/* ── Ansicht: Wissen ── */
+function renderWissenView() {
+  const legende = `<div class="card"><h2>Evidenzgrade</h2><p class="kb">
+    ${evB("A")} Meta-Analyse / Leitlinie &nbsp; ${evB("B")} Systematischer Review &nbsp; ${evB("C")} RCT<br>
+    ${evB("D")} Beobachtung / EMG &nbsp; ${evB("E")} Expertenmeinung / Modell — <i>kursiv = Evidenz ausdrücklich unsicher</i>.<br>
+    <span class="src">Basis: Meta-Analysen & Position Stands (ACSM, ISSN u. a.) — keine Influencer-Aussagen. Quellen öffnen die PubMed-Suche zur jeweiligen Literatur.</span></p></div>`;
+  const wissenschaft = `<div class="card"><h2>🔬 Trainingswissenschaft</h2>` +
+    WISSENSCHAFT.map(([t, g, txt, src, q]) => `
+      <details class="acc" style="border:none;border-top:1px solid var(--line);border-radius:0;padding:0;margin:0">
+        <summary style="font-size:15px;padding:11px 0">${t} ${evB(g)}</summary>
+        <p class="kb" style="margin:0 0 12px">${txt}<span class="src">${src} · ${srcLink("PubMed", q)}</span></p>
+      </details>`).join("") + `</div>`;
+  const qa = `<div class="card"><h2>🧠 Trainingswissen</h2>` +
+    WISSEN_QA.map(([q, items]) => `
+      <details class="acc" style="border:none;border-top:1px solid var(--line);border-radius:0;padding:0;margin:0">
+        <summary style="font-size:15px;padding:11px 0">${q}</summary>
+        <ul class="kb" style="margin:0 0 12px">${items.map(([txt, g, ql]) =>
+          `<li>${txt} ${evB(g)}${ql ? `<span class="src">${srcLink("PubMed", ql)}</span>` : ""}</li>`).join("")}</ul>
+      </details>`).join("") + `</div>`;
+  document.getElementById("tw-wissen").innerHTML = legende + wissenschaft + qa;
+}
+
+
+
+/* ── Fest eingebauter persönlicher Plan (einmaliges Seeding, überschreibt nichts) ── */
+const USER_PLAN_SEED = [
+  { name: "Gym Tag 1 · Rücken/Bizeps", type: "kraft", exercises: [
+    { name: "Klimmzüge", sets: 3, reps: "6–10" },
+    { name: "Rudern (Langhantel)", sets: 3, reps: "8–10" },
+    { name: "Enges Rudern", sets: 3, reps: "10–12" },
+    { name: "Hyperextensions", sets: 2, reps: "12–15" },
+    { name: "Bizeps-Curls (Kurzhantel)", sets: 3, reps: "10–12" },
+    { name: "Hammer Curls", sets: 2, reps: "10–12" }]},
+  { name: "Gym Tag 2 · Brust/Schulter/Trizeps", type: "kraft", exercises: [
+    { name: "Schrägbankdrücken", sets: 4, reps: "6–10" },
+    { name: "Dips", sets: 3, reps: "8–12" },
+    { name: "Schulterdrücken (Kurzhantel)", sets: 3, reps: "6–10" },
+    { name: "Butterfly", sets: 2, reps: "12–15" },
+    { name: "Seitheben", sets: 3, reps: "12–15" },
+    { name: "Reverse Butterfly", sets: 2, reps: "12–15" }]},
+  { name: "Gym Tag 3 · Athletik", type: "kraft", exercises: [
+    { name: "Push Press", sets: 4, reps: "3–5 explosiv" },
+    { name: "Trap Bar Kreuzheben", sets: 4, reps: "5" },
+    { name: "Medizinball-Slams", sets: 3, reps: "5/Seite" },
+    { name: "Farmer's Walk", sets: 3, reps: "30–40 m" },
+    { name: "Box Jumps", sets: 3, reps: "5" },
+    { name: "Pallof Press", sets: 3, reps: "10/Seite" },
+    { name: "Hängendes Beinheben", sets: 3, reps: "10–15" }]}
+];
+const WEEKPLAN_SEED = [
+  ["Mo", "🥋 Ringen + Luta Livre", "18–20 Uhr"],
+  ["Di", "🏋️ Gym Tag 2 · Brust/Schulter/Trizeps", ""],
+  ["Mi", "🏋️ Gym Tag 1 · Rücken/Bizeps", ""],
+  ["Do", "🥊 Muay Thai + Luta Livre", "18–20 Uhr"],
+  ["Fr", "🥋 Ringen", "18–20 Uhr"],
+  ["Sa", "⚡ Gym Tag 3 · Athletik", ""],
+  ["So", "😴 Ruhetag", ""]
+];
+function seedUserData() {
+  let changed = false;
+  if (!state._seedV1) {
+    USER_PLAN_SEED.forEach(p => {
+      if (!state.plans.some(x => x.name === p.name)) {
+        state.plans.push({ id: uid(), name: p.name, type: p.type, exercises: p.exercises });
+        changed = true;
+      }
+    });
+    state._seedV1 = true; changed = true;
+  }
+  if (!state.weekplan.length) { state.weekplan = WEEKPLAN_SEED; changed = true; }
+  if (changed) save();
+}
+function renderWeekplan() {
+  const card = document.getElementById("weekplanCard");
+  card.hidden = !state.weekplan.length;
+  if (!state.weekplan.length) return;
+  const todayIdx = (new Date().getDay() + 6) % 7; // Mo = 0
+  document.getElementById("weekplanList").innerHTML = state.weekplan.map((row, i) => `
+    <div class="krow" style="${i === todayIdx ? "background:var(--w-train);border-radius:12px;padding-left:8px;padding-right:8px" : ""}">
+      <span class="kico" style="font-size:13px;font-weight:800;color:${i === todayIdx ? "var(--c-train)" : "var(--muted)"}">${row[0]}</span>
+      <div class="kmain"><div class="kname">${row[1]}<span>${row[2] || ""}${i === todayIdx ? " · heute" : ""}</span></div></div>
+    </div>`).join("");
+}
+
+/* ── Ansicht: Trainingsanalyse ── */
+const MUSKEL_KEYS = [
+  ["Core", ["bauch", "crunch", "plank", "beinheben", "carry", "get-up", "swing", "pallof", "slam", "rotation", "ab-wheel", "walk"]],
+  ["Schultern", ["seithe", "schulterdr", "reverse", "press", "face", "military", "delt"]],
+  ["Brust", ["bank", "dip", "brust", "fliegende", "liegest", "butterfly"]],
+  ["Rücken", ["klimm", "ruder", "latzug", "row", "kreuzheb", "hang", "pull", "hyperext"]],
+  ["Bizeps", ["curl", "bizeps"]],
+  ["Trizeps", ["trizeps", "stirndr", "pushdown"]],
+  ["Beine", ["kniebeu", "beinpresse", "squat", "goblet", "ausfall", "beinstr", "beinbeu", "wade", "hip thrust", "nordic", "jump", "sprung"]]
+];
+function muskelFuer(name) {
+  const n = name.toLowerCase();
+  for (const [m, keys] of MUSKEL_KEYS) if (keys.some(k => n.includes(k))) return m;
+  return "Sonstiges";
+}
+function renderAnalyseView() {
+  const el = document.getElementById("tw-analyse");
+  if (!state.workouts.some(w => (w.exercises || []).length)) {
+    el.innerHTML = `<div class="card"><h2>🔬 Analyse</h2><p class="kb">Sobald du Trainings mit Übungen loggst, entsteht hier deine komplette Analyse: Volumen pro Muskel, PRs, Plateaus, Deload-Empfehlung und Schlaf-vs.-Leistung.</p></div>`;
+    return;
+  }
+  const days7 = lastNDays(7);
+  const days28 = lastNDays(28);
+
+  /* 1) Sätze pro Muskel (7 Tage) vs. Richtwert 10–20 */
+  const perMuskel = {};
+  state.workouts.filter(w => days7.includes(w.date)).forEach(w =>
+    (w.exercises || []).forEach(ex => {
+      const m = muskelFuer(ex.name);
+      perMuskel[m] = (perMuskel[m] || 0) + ex.sets.length;
+    }));
+  const muskelHtml = MUSKEL_KEYS.map(([m]) => m).concat(["Sonstiges"]).filter(m => true).map(m => {
+    const v = perMuskel[m] || 0;
+    const pct = Math.min(100, v / 20 * 100);
+    const status = v === 0 ? "" : v < 10 ? " · unter Richtwert" : v <= 20 ? " · im Zielbereich ✓" : " · sehr hoch";
+    if (v === 0 && m === "Sonstiges") return "";
+    return `<div class="krow"><span class="kico">${v >= 10 && v <= 20 ? "✅" : v === 0 ? "⬜" : "🔶"}</span>
+      <div class="kmain"><div class="kname">${m}<span>${v} Sätze${status}</span></div>
+      <div class="kbar"><i style="width:${pct}%;background:${v >= 10 && v <= 20 ? "var(--c-train)" : "var(--c-gebet)"}"></i></div></div></div>`;
+  }).join("");
+
+  /* 2) PR-Tracker */
+  const namen = allExerciseNames();
+  const prHtml = namen.map(n => {
+    const pr = prFor(n);
+    if (!pr || !pr.best || !pr.best.kg) return "";
+    const fresh = days28.slice(14).includes(pr.best.date);
+    return `<div class="planrow"><div class="pr-name">${esc(n)}
+      <span class="pr-rx" style="color:var(--c-gebet)">${fmtNum(pr.best.kg, pr.best.kg % 1 ? 1 : 0)} kg × ${pr.best.reps}${fresh ? " 🆕" : ""}</span></div>
+      <div class="pr-sub">${fmtDate(pr.best.date, { day: "2-digit", month: "2-digit", year: "2-digit" })} · ${pr.sessions} Einheiten</div></div>`;
+  }).filter(Boolean).join("");
+
+  /* 3) Plateau-Analyse: Ø Top-Satz letzte 3 vs. vorherige 3 Einheiten */
+  let plateauCount = 0;
+  const platHtml = namen.map(n => {
+    const sess = exSessions(n);
+    if (sess.length < 6) return "";
+    const top = s2 => Math.max(...s2.sets.map(x => x.kg));
+    const last3 = sess.slice(-3).reduce((a, s2) => a + top(s2), 0) / 3;
+    const prev3 = sess.slice(-6, -3).reduce((a, s2) => a + top(s2), 0) / 3;
+    const diff = last3 - prev3;
+    let label, tipp;
+    if (diff > 0.5) { label = "▲ steigt"; tipp = "Weiter so — Progression läuft."; }
+    else if (diff < -0.5) { label = "▼ Rückschritt"; plateauCount++; tipp = "Check: Schlaf, Kalorien, Pausen — evtl. Deload."; }
+    else { label = "＝ Plateau"; plateauCount++; tipp = "2–3 Wochen: +1 Satz oder kleinere Steigerung (+1 Wdh.) versuchen."; }
+    return `<div class="planrow"><div class="pr-name">${esc(n)}
+      <span class="pr-rx" style="color:${diff > 0.5 ? "var(--good-text)" : diff < -0.5 ? "var(--over)" : "var(--c-gebet)"}">${label}</span></div>
+      <div class="pr-sub">Ø Top-Satz: ${fmtNum(prev3, 1)} → ${fmtNum(last3, 1)} kg · ${tipp}</div></div>`;
+  }).filter(Boolean).join("");
+
+  /* 4) Deload & Erholung (Heuristik — Expertenmeinung) */
+  const weeksTrained = (() => {
+    let count = 0;
+    for (let wI = 0; wI < 10; wI++) {
+      const end = new Date(); end.setDate(end.getDate() - wI * 7);
+      const start = new Date(end); start.setDate(end.getDate() - 6);
+      const c = state.workouts.filter(x => x.date >= keyOf(start) && x.date <= keyOf(end)).length;
+      if (c >= 2) count++; else break;
+    }
+    return count;
+  })();
+  const sleepVals7 = days7.map(k => state.sleep[k]).filter(v => v > 0);
+  const sleepAvg = sleepVals7.length ? sleepVals7.reduce((a, b) => a + b) / sleepVals7.length : null;
+  let deloadTxt, deloadIco;
+  if (weeksTrained >= 6 && (plateauCount >= 2 || (sleepAvg != null && sleepAvg < 6.5))) {
+    deloadIco = "🔴"; deloadTxt = `<b>Deload empfohlen:</b> ${weeksTrained} Wochen am Stück trainiert, ${plateauCount} Übung(en) stagnieren${sleepAvg != null && sleepAvg < 6.5 ? ", Schlaf niedrig" : ""}. Diese Woche: halbes Volumen, −10–20 % Last.`;
+  } else if (weeksTrained >= 5 && plateauCount >= 1) {
+    deloadIco = "🟡"; deloadTxt = `<b>Bald einplanen:</b> ${weeksTrained} Wochen Training, erste Stagnation. Deload in 1–2 Wochen vormerken.`;
+  } else {
+    deloadIco = "🟢"; deloadTxt = `<b>Kein Deload nötig:</b> ${weeksTrained} Trainingswoche(n) in Folge, Progression ${plateauCount ? "größtenteils" : ""} intakt. Weiter steigern!`;
+  }
+  const w7 = state.workouts.filter(w => days7.includes(w.date)).length;
+  let erholIco, erholTxt;
+  if ((sleepAvg == null || sleepAvg >= 7) && w7 <= 5) { erholIco = "🟢"; erholTxt = "Erholt — grünes Licht für harte Sätze."; }
+  else if ((sleepAvg != null && sleepAvg < 6.5) && w7 >= 4) { erholIco = "🔴"; erholTxt = "Ermüdet: wenig Schlaf + hohe Dichte. Heute lieber Technik/locker, früh ins Bett."; }
+  else { erholIco = "🟡"; erholTxt = "Moderat — normal trainieren, RIR ehrlich lassen."; }
+
+  /* 5) Schlaf vs. Leistung (eigene Daten) */
+  const volDays = state.workouts.filter(w => (w.exercises || []).some(e => e.sets.length))
+    .map(w => ({ date: w.date, vol: (w.exercises || []).reduce((a, e) => a + e.sets.reduce((b, x) => b + x.kg * x.reps, 0), 0), sleep: state.sleep[w.date] }))
+    .filter(x => x.vol > 0 && x.sleep > 0);
+  const hi = volDays.filter(x => x.sleep >= 7), lo = volDays.filter(x => x.sleep < 7);
+  let svlHtml;
+  if (hi.length >= 3 && lo.length >= 3) {
+    const avg = a => a.reduce((x, y) => x + y.vol, 0) / a.length;
+    const d = Math.round((avg(hi) / avg(lo) - 1) * 100);
+    svlHtml = `Mit ≥7 h Schlaf bewegst du im Schnitt <b style="color:${d >= 0 ? "var(--good-text)" : "var(--over)"}">${d >= 0 ? "+" : ""}${d} %</b> Volumen pro Einheit (${hi.length} vs. ${lo.length} Einheiten). ${evB("D")} <span class="src">Eigene Daten — Korrelation, keine Kausalität.</span>`;
+  } else {
+    svlHtml = `Noch zu wenig Daten (brauche je ≥3 Einheiten mit ≥7 h und &lt;7 h Schlaf). Track weiter — dann rechnet die App deinen persönlichen Schlaf-Effekt aus.`;
+  }
+
+  /* 6) Körpergewicht vs. Kraft */
+  let kgKraftHtml = "Wiege dich & logge PRs — dann erscheint hier deine relative Kraft.";
+  const kw = currentWeight();
+  if (kw != null && namen.length) {
+    let bestN = null, bestPr = null;
+    namen.forEach(n => { const p = prFor(n); if (p && p.best && (!bestPr || p.best.kg > bestPr.kg)) { bestPr = p.best; bestN = n; } });
+    if (bestPr) {
+      kgKraftHtml = `Stärkste Übung: <b>${esc(bestN)}</b> mit ${fmtNum(bestPr.kg, 1)} kg = <b style="color:var(--c-train)">${fmtNum(bestPr.kg / kw, 2)}× Körpergewicht</b> (bei ${fmtNum(kw, 1)} kg). Sinkt dein Gewicht bei gleichen PRs, steigt deine relative Kraft — das ist die Transformation. 📈`;
+    }
+  }
+
+  /* Wochenvolumen-Chart wird nach dem Einfügen gerendert */
+  el.innerHTML = `
+    <div class="card"><h2>${erholIco} Erholungsstatus</h2><p class="kb">${erholTxt}<span class="src">Heuristik aus Schlaf (Ø ${sleepAvg != null ? fmtNum(sleepAvg, 1) + " h" : "–"}) & Trainingsdichte (${w7}/Woche) ${evB("E")}</span></p></div>
+    <div class="card"><h2>${deloadIco} Deload-Check</h2><p class="kb">${deloadTxt}<span class="src">Regelbasiert (Wochen in Folge + Plateaus + Schlaf) — Deload-Timing ist Praxiswissen ${evB("E")}</span></p></div>
+    <div class="card"><h2>💪 Sätze pro Muskel · 7 Tage</h2>${muskelHtml}<p class="hint">Richtwert 10–20 harte Sätze/Muskel/Woche ${evB("A")} — kleine Muskeln zählen indirekte Arbeit mit.</p></div>
+    <div class="card"><h2>📊 Sätze pro Woche · 8 Wochen</h2><div class="chartbox" id="anaVolChart"><div class="viz-tip"></div></div></div>
+    <div class="card"><h2>🏆 PR-Tracker</h2>${prHtml || '<p class="empty">Noch keine PRs.</p>'}</div>
+    <div class="card"><h2>📉 Plateau-Analyse</h2>${platHtml || '<p class="empty">Braucht ≥6 Einheiten pro Übung.</p>'}</div>
+    <div class="card"><h2>😴 Schlaf vs. Leistung</h2><p class="kb">${svlHtml}</p></div>
+    <div class="card"><h2>⚖️ Körpergewicht vs. Kraft</h2><p class="kb">${kgKraftHtml}</p></div>
+    <p class="hint" style="padding:0 4px">Kraftverlauf je Übung: Log-Ansicht → 📈 Übungs-Statistik.</p>`;
+
+  const weeks = [];
+  for (let wI = 7; wI >= 0; wI--) {
+    const end = new Date(); end.setDate(end.getDate() - wI * 7);
+    const start = new Date(end); start.setDate(end.getDate() - 6);
+    const sets = state.workouts.filter(x => x.date >= keyOf(start) && x.date <= keyOf(end))
+      .reduce((a, w) => a + (w.exercises || []).reduce((b, e) => b + e.sets.length, 0), 0);
+    weeks.push({ label: fmtDate(keyOf(end)), val: sets });
+  }
+  drawBars("anaVolChart", weeks, { color: "var(--c-train)", labelEvery: 2, unit: " Sätze" });
+}
+
 /* ══════════════ Start ══════════════ */
 document.getElementById("todayDate").textContent =
   new Date().toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "short" });
+seedUserData();
 autoRecur();
 renderProfil();
 renderHeute();

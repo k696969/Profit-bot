@@ -104,6 +104,15 @@
   .doneRing .center b { font-size: 23px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .doneRing .center span { font-size: 10.5px; color: var(--muted); }
 
+  /* ── Fortschritts-Balken ── */
+  .pbar .pbar-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .pbar .pbar-lbl { font-size: 14px; font-weight: 700; }
+  .pbar .pbar-val { font-size: 20px; font-weight: 850; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+  .pbar .pbar-track { height: 12px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+  .pbar .pbar-fill { height: 100%; border-radius: 6px; transition: width .5s ease; }
+  @media (prefers-reduced-motion: reduce) { .pbar .pbar-fill { transition: none; } }
+  .pbar .pbar-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
   /* ── Tracker-Kacheln ── */
   .tilegrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
   .tile {
@@ -440,6 +449,11 @@
       </div>
     </div>
 
+    <div class="card" id="progressCard" hidden>
+      <div class="pbar" id="pbarWeight"></div>
+      <div class="pbar" id="pbarStrength" style="margin-top:14px"></div>
+    </div>
+
     <div class="tilegrid" id="tileGrid"></div>
 
     <div class="card" id="extrasCard" hidden>
@@ -544,6 +558,10 @@
     <details class="acc" ontoggle="if(this.open && window.renderVerlaufCharts) setTimeout(renderVerlaufCharts, 40)">
       <summary>👟 Schritte</summary>
       <div class="chartbox" id="stepsChart"><div class="viz-tip"></div></div>
+    </details>
+    <details class="acc" ontoggle="if(this.open && window.renderVerlaufCharts) setTimeout(renderVerlaufCharts, 40)">
+      <summary>💧 Wasser</summary>
+      <div class="chartbox" id="waterChart"><div class="viz-tip"></div></div>
     </details>
     <details class="acc" ontoggle="if(this.open && window.renderVerlaufCharts) setTimeout(renderVerlaufCharts, 40)">
       <summary>🤲 Gebete</summary>
@@ -714,6 +732,16 @@
   </div>
 </dialog>
 
+<!-- ════════ SHEET: Gebete ════════ -->
+<dialog class="sheet" id="prayerSheet">
+  <div class="sheet-inner">
+    <div class="sheet-grip"></div>
+    <h3>🤲 Gebete heute</h3>
+    <ul class="extras" id="prayerRows"></ul>
+    <button class="btn ghost" style="width:100%;margin-top:12px" onclick="closeSheet('prayerSheet')">Fertig</button>
+  </div>
+</dialog>
+
 <!-- ════════ SHEET: Training ════════ -->
 <dialog class="sheet" id="trainSheet">
   <div class="sheet-inner">
@@ -828,6 +856,7 @@ const DEFAULT_STATE = {
   workouts: [],         // [{id, date, type, intensity, min, exercises}]
   sleep: {},            // {date: stunden}
   steps: {},            // {date: anzahl}
+  water: {},            // {date: liter}
   gebete: {},           // {date: 0..5}
   supps: {},            // {date: true}
   extras: [],           // [{id, name}] eigene Tagesziele
@@ -881,6 +910,7 @@ function load() {
       if (!s.exVideos || typeof s.exVideos !== "object" || Array.isArray(s.exVideos)) s.exVideos = {};
       if (!s.measures || typeof s.measures !== "object" || Array.isArray(s.measures)) s.measures = {};
       if (!Array.isArray(s.suppsList)) s.suppsList = [];
+      if (!s.water || typeof s.water !== "object" || Array.isArray(s.water)) s.water = {};
       /* Migration aus der alten Checklisten-Version */
       if (old.checks && typeof old.checks === "object" && !old._migrated6) {
         const stepsItem = (old.checkItems || []).find(i => i.type === "steps");
@@ -957,9 +987,10 @@ function workoutsOn(key) { return state.workouts.filter(w => w.date === key); }
 
 const TRACKERS = [
   { id: "training", name: "Training", ico: "🏋️", color: "var(--c-train)", wash: "var(--w-train)" },
-  { id: "sleep",    name: "Schlaf",   ico: "😴", color: "var(--c-sleep)", wash: "var(--w-sleep)" },
   { id: "weight",   name: "Gewicht",  ico: "⚖️", color: "var(--c-weight)", wash: "var(--w-weight)" },
+  { id: "sleep",    name: "Schlaf",   ico: "😴", color: "var(--c-sleep)", wash: "var(--w-sleep)" },
   { id: "steps",    name: "Schritte", ico: "👟", color: "var(--c-steps)", wash: "var(--w-steps)" },
+  { id: "water",    name: "Wasser",   ico: "💧", color: "var(--c-steps)", wash: "var(--w-steps)" },
   { id: "gebete",   name: "Gebete",   ico: "🤲", color: "var(--c-gebet)", wash: "var(--w-gebet)" },
   { id: "supps",    name: "Supps",    ico: "💊", color: "var(--c-supp)", wash: "var(--w-supp)" }
 ];
@@ -983,7 +1014,8 @@ function trackerState(id, key) {
       return { done: kg != null, val: kg != null ? fmtNum(kg, 1) : "–", sub: kg != null ? (m ? "kg · 📏 Maße" : "kg") : "Gewicht & Maße" };
     }
     case "steps": { const n = state.steps[key]; return { done: n > 0, val: n ? fmtNum(n) : "–", sub: n >= 10000 ? "Ziel erreicht 🎯" : "Ziel 10.000" }; }
-    case "gebete": { const n = state.gebete[key] || 0; return { done: n >= 5, val: n + "/5", sub: n >= 5 ? "alle gebetet ✨" : "tippen = +1" }; }
+    case "gebete": { const n = gebeteCount(key); return { done: n >= 5, val: n + "/5", sub: n >= 5 ? "alle gebetet ✨" : "antippen" }; }
+    case "water": { const l = state.water[key] || 0; return { done: l >= WATER_GOAL, val: fmtNum(l, 2) + " L", sub: l >= WATER_GOAL ? "Ziel erreicht 💧" : "Ziel " + fmtNum(WATER_GOAL, 1) + " L" }; }
     case "supps": {
       if (state.suppsList.length) {
         const taken = state.suppsList.filter(n => suppTaken(key, n)).length;
@@ -996,10 +1028,8 @@ function trackerState(id, key) {
 function tileTap(id) {
   const key = activeKey();
   if (id === "training") { openSheet("trainSheet"); return; }
-  if (id === "gebete") {
-    state.gebete[key] = Math.min(5, (state.gebete[key] || 0) + 1);
-    save(); renderHeute(); return;
-  }
+  if (id === "gebete") { openPrayers(); return; }
+  if (id === "water") { waterTap(); return; }
   if (id === "weight") { openBody(); return; }
   if (id === "supps") {
     if (state.suppsList.length) { openSupps(); return; }
@@ -1063,6 +1093,110 @@ function saveVal(ev) {
   save(); closeSheet("valSheet"); renderHeute();
 }
 
+
+/* ══════════════ Gebete (5 benannte Gebete) ══════════════ */
+const PRAYERS = [["morgen","Morgen","Fajr"],["mittag","Mittag","Dhuhr"],["nachmittag","Nachmittag","Asr"],["spaet","Spät","Maghrib"],["nacht","Nacht","Isha"]];
+function gebeteCount(key) {
+  const d = state.gebete[key];
+  if (typeof d === "number") return d;
+  if (d && typeof d === "object") return Object.values(d).filter(Boolean).length;
+  return 0;
+}
+function prayerDone(key, id) {
+  const d = state.gebete[key];
+  if (typeof d === "number") { const i = PRAYERS.findIndex(p => p[0] === id); return i > -1 && i < d; }
+  if (d && typeof d === "object") return !!d[id];
+  return false;
+}
+function togglePrayer(id) {
+  const key = activeKey();
+  let d = state.gebete[key];
+  if (typeof d === "number") { const o = {}; PRAYERS.forEach((p, i) => { if (i < d) o[p[0]] = true; }); d = o; }
+  if (!d || typeof d !== "object") d = {};
+  if (d[id]) delete d[id]; else d[id] = true;
+  if (Object.keys(d).length) state.gebete[key] = d; else delete state.gebete[key];
+  save(); renderPrayers(); renderHeute();
+}
+function openPrayers() { renderPrayers(); document.getElementById("prayerSheet").showModal(); }
+function renderPrayers() {
+  const key = activeKey();
+  document.getElementById("prayerRows").innerHTML = PRAYERS.map(([id, label, salah]) => {
+    const done = prayerDone(key, id);
+    return `<li class="${done ? "x-done" : ""}">
+      <button type="button" class="x-row-btn" onclick="togglePrayer('${id}')">
+        <span class="x-check">${done ? "✓" : ""}</span>
+        <span class="x-name">${label} <span style="color:var(--muted);font-weight:400;font-size:12.5px">· ${salah}</span></span></button></li>`;
+  }).join("");
+}
+
+/* ══════════════ Wasser (Liter) ══════════════ */
+const WATER_GOAL = 3;      // Liter/Tag — aktiver Sportler mit 2 Einheiten
+const WATER_STEP = 0.25;   // ein Glas
+function waterTap() {
+  const key = activeKey();
+  state.water[key] = Math.round(((state.water[key] || 0) + WATER_STEP) * 100) / 100;
+  save(); renderHeute();
+}
+function waterMinus(ev) {
+  ev.stopPropagation();
+  const key = activeKey();
+  state.water[key] = Math.max(0, Math.round(((state.water[key] || 0) - WATER_STEP) * 100) / 100);
+  if (!state.water[key]) delete state.water[key];
+  save(); renderHeute();
+}
+
+
+/* ══════════════ Fortschritt: Kilos runter + Kraft rauf ══════════════ */
+function strengthProgress() {
+  /* Ø Steigerung des besten Satzes je Übung seit der ersten Einheit.
+     Score = kg>0 ? geschätztes 1RM (Epley) : Wiederholungen (Körpergewicht). */
+  const score = set => set.kg > 0 ? set.kg * (1 + set.reps / 30) : set.reps;
+  const names = (typeof allExerciseNames === "function") ? allExerciseNames() : [];
+  const rels = [];
+  names.forEach(n => {
+    const sess = exSessions(n);
+    if (sess.length < 2) return;
+    const top = sx => Math.max(...sx.sets.map(score));
+    const first = top(sess[0]), last = top(sess[sess.length - 1]);
+    if (first > 0) rels.push(last / first - 1);
+  });
+  if (!rels.length) return null;
+  return Math.round(rels.reduce((a, b) => a + b, 0) / rels.length * 100);
+}
+function renderProgress() {
+  const card = document.getElementById("progressCard");
+  const w = currentWeight(), sw = startWeight(), goal = state.profile ? state.profile.goal : null;
+  const strength = strengthProgress();
+  let html1 = "", html2 = "";
+  if (w != null && sw != null) {
+    const lost = sw - w;
+    const totalToGo = (goal != null) ? (sw - goal) : null;
+    const pct = (totalToGo && totalToGo > 0) ? Math.max(0, Math.min(100, lost / totalToGo * 100)) : (lost > 0 ? 100 : 0);
+    const sub = (goal != null)
+      ? (w <= goal ? "Ziel erreicht! 🎉" : "noch " + fmtNum(w - goal, 1) + " kg bis " + fmtNum(goal, 1) + " kg")
+      : "Startgewicht " + fmtNum(sw, 1) + " kg";
+    html1 = `<div class="pbar-top"><span class="pbar-lbl">⚖️ Abgenommen</span>
+      <span class="pbar-val" style="color:${lost >= 0 ? "var(--c-weight)" : "var(--over)"}">${lost >= 0 ? "−" : "+"}${fmtNum(Math.abs(lost), 1)} kg</span></div>
+      <div class="pbar-track"><div class="pbar-fill" style="width:${pct}%;background:var(--c-weight)"></div></div>
+      <div class="pbar-sub">${sub}</div>`;
+  } else {
+    html1 = `<div class="pbar-top"><span class="pbar-lbl">⚖️ Abgenommen</span><span class="pbar-val" style="color:var(--muted)">–</span></div>
+      <div class="pbar-track"></div><div class="pbar-sub">Wiege dich, dann startet dein Fortschritt.</div>`;
+  }
+  if (strength != null) {
+    const pct = Math.max(0, Math.min(100, strength));
+    html2 = `<div class="pbar-top"><span class="pbar-lbl">💪 Kraft gesteigert</span>
+      <span class="pbar-val" style="color:var(--c-train)">${strength >= 0 ? "+" : ""}${strength} %</span></div>
+      <div class="pbar-track"><div class="pbar-fill" style="width:${pct}%;background:var(--c-train)"></div></div>
+      <div class="pbar-sub">Ø deiner Übungen seit der ersten Einheit</div>`;
+  } else {
+    html2 = `<div class="pbar-top"><span class="pbar-lbl">💪 Kraft gesteigert</span><span class="pbar-val" style="color:var(--muted)">–</span></div>
+      <div class="pbar-track"></div><div class="pbar-sub">Ab der 2. Trainingseinheit einer Übung sichtbar.</div>`;
+  }
+  card.hidden = (w == null && strength == null);
+  document.getElementById("pbarWeight").innerHTML = html1;
+  document.getElementById("pbarStrength").innerHTML = html2;
+}
 
 /* ══════════════ Körper: Gewicht + Maße ══════════════ */
 const MEASURE_DEFS = [["waist","Bauch","mWaist"],["chest","Brust","mChest"],["arm","Arm","mArm"],["thigh","Bein","mThigh"],["hip","Hüfte","mHip"]];
@@ -1178,8 +1312,8 @@ function renderHeute() {
   document.getElementById("tileGrid").innerHTML = TRACKERS.map(t => {
     const st = trackerState(t.id, key);
     if (st.done) done++;
-    const minus = (t.id === "gebete" && (state.gebete[key] || 0) > 0)
-      ? `<button type="button" class="t-minus" onclick="gebetMinus(event)" aria-label="Gebet abziehen">−</button>` : "";
+    const minus = (t.id === "water" && (state.water[key] || 0) > 0)
+      ? `<button type="button" class="t-minus" onclick="waterMinus(event)" aria-label="Wasser abziehen">−</button>` : "";
     /* div statt button: Buttons dürfen keine Buttons enthalten (Minus-Knopf) */
     return `<div class="tile ${st.done ? "done" : ""}" role="button" tabindex="0"
       style="${st.done ? "background:" + t.wash + ";" : ""}" onclick="tileTap('${t.id}')"
@@ -1202,7 +1336,8 @@ function renderHeute() {
     confettiBurst();
   }
 
-  /* Eigene Ziele + Tagebuch */
+  /* Fortschritt, eigene Ziele, Tagebuch */
+  renderProgress();
   renderExtras();
   renderJournal();
 
@@ -1275,7 +1410,8 @@ function daySummaryAuto(key) {
   if (state.steps[key]) parts.push("👟 " + fmtNum(state.steps[key]));
   const kg = weightOn(key);
   if (kg != null) parts.push("⚖️ " + fmtNum(kg, 1) + " kg");
-  if (state.gebete[key]) parts.push("🤲 " + state.gebete[key] + "/5");
+  if (gebeteCount(key)) parts.push("🤲 " + gebeteCount(key) + "/5");
+  if (state.water[key]) parts.push("💧 " + fmtNum(state.water[key], 2) + " L");
   if (state.supps[key]) parts.push("💊✓");
   return parts.join(" · ");
 }
@@ -1310,8 +1446,9 @@ function computeStreak() {
   state.weights.forEach(w => tracked.add(w.date));
   for (const [k, v] of Object.entries(state.sleep)) if (v > 0) tracked.add(k);
   for (const [k, v] of Object.entries(state.steps)) if (v > 0) tracked.add(k);
-  for (const [k, v] of Object.entries(state.gebete)) if (v > 0) tracked.add(k);
-  for (const [k, v] of Object.entries(state.supps)) if (v) tracked.add(k);
+  for (const k of Object.keys(state.gebete)) if (gebeteCount(k) > 0) tracked.add(k);
+  for (const k of Object.keys(state.supps)) if (state.supps[k]) tracked.add(k);
+  for (const [k, v] of Object.entries(state.water)) if (v > 0) tracked.add(k);
   for (const [k, day] of Object.entries(state.extrasDone)) if (Object.values(day || {}).some(Boolean)) tracked.add(k);
   const d = new Date();
   if (!tracked.has(keyOf(d))) d.setDate(d.getDate() - 1);
@@ -1598,7 +1735,8 @@ function goalReached(id, key) {
     case "sleep": { const h = state.sleep[key]; return h >= 7; }
     case "weight": return weightOn(key) != null;
     case "steps": return (state.steps[key] || 0) >= 10000;
-    case "gebete": return (state.gebete[key] || 0) >= 5;
+    case "gebete": return gebeteCount(key) >= 5;
+    case "water": return (state.water[key] || 0) >= WATER_GOAL;
     case "supps": return state.suppsList.length ? state.suppsList.every(n => suppTaken(key, n)) : !!state.supps[key];
   }
   return false;
@@ -1820,8 +1958,10 @@ function renderVerlaufCharts() {
     { target: 8, color: "var(--c-sleep)", unit: " h", decimals: 1 });
   drawBars("stepsChart", days14.map(k => ({ label: fmtDate(k), val: state.steps[k] || 0 })),
     { target: 10000, color: "var(--c-steps)" });
-  drawBars("gebetChart", days14.map(k => ({ label: fmtDate(k), val: state.gebete[k] || 0 })),
+  drawBars("gebetChart", days14.map(k => ({ label: fmtDate(k), val: gebeteCount(k) })),
     { target: 5, color: "var(--c-gebet)" });
+  drawBars("waterChart", days14.map(k => ({ label: fmtDate(k), val: state.water[k] || 0 })),
+    { target: WATER_GOAL, color: "var(--c-steps)", unit: " L", decimals: 2 });
   const weeks = [];
   for (let wI = 7; wI >= 0; wI--) {
     const end = new Date(); end.setDate(end.getDate() - wI * 7);
@@ -1837,11 +1977,12 @@ function renderWeekReport() {
   const train = state.workouts.filter(w => keys.includes(w.date)).length;
   const sleepVals = keys.map(k => state.sleep[k]).filter(v => v > 0);
   const stepVals = keys.map(k => state.steps[k]).filter(v => v > 0);
-  const gebetSum = keys.reduce((s, k) => s + (state.gebete[k] || 0), 0);
+  const gebetSum = keys.reduce((s, k) => s + gebeteCount(k), 0);
+  const waterVals = keys.map(k => state.water[k]).filter(v => v > 0);
   const suppDays = keys.filter(k => state.supps[k]).length;
   const wWeek = state.weights.filter(x => keys.includes(x.date));
   const wDelta = wWeek.length >= 2 ? wWeek[wWeek.length - 1].kg - wWeek[0].kg : null;
-  if (!train && !sleepVals.length && !stepVals.length && !gebetSum && !suppDays && wDelta == null) {
+  if (!train && !sleepVals.length && !stepVals.length && !gebetSum && !suppDays && !waterVals.length && wDelta == null) {
     card.hidden = true; return;
   }
   card.hidden = false;
@@ -1850,6 +1991,7 @@ function renderWeekReport() {
     ["Ø Schlaf", sleepVals.length ? fmtNum(sleepVals.reduce((a, b) => a + b) / sleepVals.length, 1) + " h" : "–"],
     ["Ø Schritte", stepVals.length ? fmtNum(stepVals.reduce((a, b) => a + b) / stepVals.length) : "–"],
     ["Gebete", gebetSum + " / 35"],
+    ["Ø Wasser", waterVals.length ? fmtNum(waterVals.reduce((a,b)=>a+b)/waterVals.length, 2) + " L" : "–"],
     ["Supplemente", suppDays + " von 7 Tagen"],
     ["Gewicht", wDelta != null ? (wDelta <= 0 ? "−" : "+") + fmtNum(Math.abs(wDelta), 1) + " kg" : "–"],
     ["Streak", computeStreak() + " Tage in Folge"]
@@ -2774,6 +2916,12 @@ function seedUserData() {
     state._seedV1 = true; changed = true;
   }
   if (!state.weekplan.length) { state.weekplan = WEEKPLAN_SEED; changed = true; }
+  if (!state._seedSupps) {
+    ["Omega-3", "D3 + K2", "Kreatin", "Schilddrüse", "Flohsamenschalen"].forEach(n => {
+      if (!state.suppsList.some(x => x.toLowerCase() === n.toLowerCase())) state.suppsList.push(n);
+    });
+    state._seedSupps = true; changed = true;
+  }
   if (changed) save();
 }
 function renderWeekplan() {

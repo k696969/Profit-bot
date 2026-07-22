@@ -413,7 +413,8 @@
   <section id="tab-heute">
     <div class="dayswitch" id="daySwitch">
       <button type="button" onclick="shiftDay(-1)" aria-label="Vorheriger Tag">‹</button>
-      <span id="dayLabel">Heute</span>
+      <button type="button" id="dayLabel" onclick="pickDate()" style="appearance:none;border:none;background:none;color:inherit;font:inherit;font-weight:750;cursor:pointer">Heute</button>
+      <input type="date" id="dayPicker" onchange="jumpDate(this.value)" style="position:absolute;opacity:0;width:1px;height:1px;pointer-events:none">
       <button type="button" id="dayFwd" onclick="shiftDay(1)" aria-label="Nächster Tag" disabled>›</button>
     </div>
 
@@ -531,6 +532,10 @@
       <div class="chartbox" id="weightChart"><div class="viz-tip"></div></div>
       <p class="empty" id="weightChartEmpty" hidden>Ab 2 Gewichtseinträgen erscheint hier deine Kurve.</p>
       <p class="hint" id="progHint"></p>
+    </details>
+    <details class="acc" id="measAcc" hidden ontoggle="if(this.open && window.renderMeasCharts) setTimeout(renderMeasCharts, 40)">
+      <summary>📏 Körpermaße (cm)</summary>
+      <div id="measCharts"></div>
     </details>
     <details class="acc" ontoggle="if(this.open && window.renderVerlaufCharts) setTimeout(renderVerlaufCharts, 40)">
       <summary>😴 Schlaf</summary>
@@ -673,6 +678,42 @@
   </div>
 </dialog>
 
+<!-- ════════ SHEET: Körper (Gewicht + Maße) ════════ -->
+<dialog class="sheet" id="bodySheet">
+  <div class="sheet-inner" style="max-height:82vh;overflow-y:auto">
+    <div class="sheet-grip"></div>
+    <h3>⚖️ Körper</h3>
+    <form onsubmit="saveBody(event)" style="display:flex;flex-direction:column;gap:10px">
+      <div class="field"><label for="bWeight">Gewicht (kg · morgens, nüchtern)</label>
+        <input id="bWeight" type="number" step="0.1" min="30" max="400" inputmode="decimal"></div>
+      <p class="hint" style="margin:4px 0 0;font-weight:650;color:var(--ink-2)">Maße in cm — optional, aber der ehrlichste Fortschritt 💪</p>
+      <div class="row2">
+        <div class="field"><label for="mWaist">Bauch (Nabel)</label><input id="mWaist" type="number" step="0.1" min="30" max="200" inputmode="decimal"></div>
+        <div class="field"><label for="mChest">Brust</label><input id="mChest" type="number" step="0.1" min="40" max="200" inputmode="decimal"></div>
+        <div class="field"><label for="mArm">Arm (angespannt)</label><input id="mArm" type="number" step="0.1" min="15" max="80" inputmode="decimal"></div>
+        <div class="field"><label for="mThigh">Oberschenkel</label><input id="mThigh" type="number" step="0.1" min="30" max="120" inputmode="decimal"></div>
+        <div class="field"><label for="mHip">Hüfte/Gesäß</label><input id="mHip" type="number" step="0.1" min="50" max="200" inputmode="decimal"></div>
+      </div>
+      <button class="btn" type="submit">Speichern</button>
+      <button class="btn ghost" type="button" onclick="closeSheet('bodySheet')">Abbrechen</button>
+    </form>
+  </div>
+</dialog>
+
+<!-- ════════ SHEET: Supplemente ════════ -->
+<dialog class="sheet" id="suppSheet">
+  <div class="sheet-inner">
+    <div class="sheet-grip"></div>
+    <h3>💊 Supplemente heute</h3>
+    <ul class="extras" id="suppRows"></ul>
+    <div style="display:flex;gap:16px;margin-top:8px">
+      <button type="button" class="linkbtn" onclick="addSupp()">＋ Supplement hinzufügen</button>
+      <button type="button" class="linkbtn" id="suppEditBtn" onclick="toggleSuppEdit()" hidden>Bearbeiten</button>
+    </div>
+    <button class="btn ghost" style="width:100%;margin-top:12px" onclick="closeSheet('suppSheet')">Fertig</button>
+  </div>
+</dialog>
+
 <!-- ════════ SHEET: Training ════════ -->
 <dialog class="sheet" id="trainSheet">
   <div class="sheet-inner">
@@ -796,6 +837,8 @@ const DEFAULT_STATE = {
   plans: [],            // [{id, name, type, exercises: [Namen oder {name, sets, reps}]}]
   exNotes: {},          // {übungsname_klein: eigene Notiz}
   exVideos: {},         // {übungsname_klein: video-url}
+  measures: {},         // {date: {waist,chest,arm,thigh,hip}} — Körpermaße in cm
+  suppsList: [],        // [Supplement-Namen] — eigene Liste
   weekplan: [],         // [[Tag, Aktivität, Zeit], …] — Wochenrhythmus
   finance: []           // [{id, date, type, amount, cat, note, recur, auto}]
 };
@@ -836,6 +879,8 @@ function load() {
       if (!s.exNotes || typeof s.exNotes !== "object" || Array.isArray(s.exNotes)) s.exNotes = {};
       if (!Array.isArray(s.weekplan)) s.weekplan = [];
       if (!s.exVideos || typeof s.exVideos !== "object" || Array.isArray(s.exVideos)) s.exVideos = {};
+      if (!s.measures || typeof s.measures !== "object" || Array.isArray(s.measures)) s.measures = {};
+      if (!Array.isArray(s.suppsList)) s.suppsList = [];
       /* Migration aus der alten Checklisten-Version */
       if (old.checks && typeof old.checks === "object" && !old._migrated6) {
         const stepsItem = (old.checkItems || []).find(i => i.type === "steps");
@@ -876,9 +921,22 @@ function shiftDay(delta) {
   const d = new Date(activeKey() + "T12:00:00");
   d.setDate(d.getDate() + delta);
   const k = keyOf(d);
-  const min = new Date(); min.setDate(min.getDate() - 30);
+  const min = new Date(); min.setDate(min.getDate() - 365);
   if (k > todayKey() || d < min) return;
   activeDate = k;
+  renderHeute();
+}
+function pickDate() {
+  const p = document.getElementById("dayPicker");
+  p.max = todayKey();
+  p.value = activeKey();
+  /* showPicker() öffnet direkt den Kalender (Fallback: Fokus) */
+  if (p.showPicker) { try { p.showPicker(); return; } catch (e) {} }
+  p.style.pointerEvents = "auto"; p.focus(); p.click();
+}
+function jumpDate(v) {
+  if (!v || v > todayKey()) return;
+  activeDate = (v === todayKey()) ? null : v;
   renderHeute();
 }
 
@@ -920,10 +978,19 @@ function trackerState(id, key) {
       return { done: n > 0, val: n ? n + "×" : "–", sub };
     }
     case "sleep": { const h = state.sleep[key]; return { done: h > 0, val: h ? fmtNum(h, h % 1 ? 1 : 0) + " h" : "–", sub: h ? (h >= 7 && h <= 9 ? "top erholt ✨" : "Ziel 7–9 h") : "Ziel 7–9 h" }; }
-    case "weight": { const kg = weightOn(key); return { done: kg != null, val: kg != null ? fmtNum(kg, 1) : "–", sub: kg != null ? "kg" : "antippen" }; }
+    case "weight": {
+      const kg = weightOn(key); const m = state.measures[key];
+      return { done: kg != null, val: kg != null ? fmtNum(kg, 1) : "–", sub: kg != null ? (m ? "kg · 📏 Maße" : "kg") : "Gewicht & Maße" };
+    }
     case "steps": { const n = state.steps[key]; return { done: n > 0, val: n ? fmtNum(n) : "–", sub: n >= 10000 ? "Ziel erreicht 🎯" : "Ziel 10.000" }; }
     case "gebete": { const n = state.gebete[key] || 0; return { done: n >= 5, val: n + "/5", sub: n >= 5 ? "alle gebetet ✨" : "tippen = +1" }; }
-    case "supps": { const v = !!state.supps[key]; return { done: v, val: v ? "✓" : "–", sub: v ? "genommen" : "tippen" }; }
+    case "supps": {
+      if (state.suppsList.length) {
+        const taken = state.suppsList.filter(n => suppTaken(key, n)).length;
+        return { done: taken === state.suppsList.length, val: taken + "/" + state.suppsList.length, sub: taken === state.suppsList.length ? "alle genommen ✨" : "antippen" };
+      }
+      const v = !!state.supps[key]; return { done: v, val: v ? "✓" : "–", sub: v ? "genommen" : "tippen" };
+    }
   }
 }
 function tileTap(id) {
@@ -933,8 +1000,10 @@ function tileTap(id) {
     state.gebete[key] = Math.min(5, (state.gebete[key] || 0) + 1);
     save(); renderHeute(); return;
   }
+  if (id === "weight") { openBody(); return; }
   if (id === "supps") {
-    state.supps[key] = !state.supps[key];
+    if (state.suppsList.length) { openSupps(); return; }
+    state.supps[key] = !state.supps[key];   // Einfach-Modus (noch keine Liste)
     save(); renderHeute(); return;
   }
   openVal(id);
@@ -992,6 +1061,94 @@ function saveVal(ev) {
     state.weights.sort((a, b) => (a.date < b.date ? -1 : 1));
   }
   save(); closeSheet("valSheet"); renderHeute();
+}
+
+
+/* ══════════════ Körper: Gewicht + Maße ══════════════ */
+const MEASURE_DEFS = [["waist","Bauch","mWaist"],["chest","Brust","mChest"],["arm","Arm","mArm"],["thigh","Bein","mThigh"],["hip","Hüfte","mHip"]];
+function measureOn(key) { return state.measures[key] || null; }
+function lastMeasure(field) {
+  const keys = Object.keys(state.measures).filter(k => state.measures[k] && state.measures[k][field] != null).sort();
+  return keys.length ? state.measures[keys[keys.length - 1]][field] : null;
+}
+function openBody() {
+  const key = activeKey();
+  document.getElementById("bWeight").value = weightOn(key) ?? "";
+  document.getElementById("bWeight").placeholder = currentWeight() != null ? "zuletzt " + fmtNum(currentWeight(), 1) : "kg";
+  const m = measureOn(key) || {};
+  MEASURE_DEFS.forEach(([f, , inputId]) => {
+    const el = document.getElementById(inputId);
+    el.value = m[f] ?? "";
+    const last = lastMeasure(f);
+    el.placeholder = last != null ? "zuletzt " + fmtNum(last, 1) : "cm";
+  });
+  document.getElementById("bodySheet").showModal();
+}
+function saveBody(ev) {
+  ev.preventDefault();
+  const key = activeKey();
+  const kg = parseFloat((document.getElementById("bWeight").value || "").replace(",", "."));
+  if (isFinite(kg) && kg >= 30 && kg <= 400) {
+    state.weights = state.weights.filter(e => e.date !== key);
+    state.weights.push({ date: key, kg });
+    state.weights.sort((a, b) => (a.date < b.date ? -1 : 1));
+  }
+  const m = {};
+  MEASURE_DEFS.forEach(([f, , inputId]) => {
+    const v = parseFloat((document.getElementById(inputId).value || "").replace(",", "."));
+    if (isFinite(v) && v > 0) m[f] = v;
+  });
+  if (Object.keys(m).length) state.measures[key] = m; else delete state.measures[key];
+  save(); closeSheet("bodySheet"); renderHeute();
+}
+
+/* ══════════════ Supplemente (Liste) ══════════════ */
+function suppTaken(key, name) {
+  const d = state.supps[key];
+  if (d === true) return true;                 // Legacy: „alle genommen"
+  if (d && typeof d === "object") return !!d[name];
+  return false;
+}
+function setSuppTaken(key, name, val) {
+  let d = state.supps[key];
+  if (d === true) { d = {}; state.suppsList.forEach(n => d[n] = true); }  // Legacy expandieren
+  if (!d || typeof d !== "object") d = {};
+  if (val) d[name] = true; else delete d[name];
+  if (Object.keys(d).length) state.supps[key] = d; else delete state.supps[key];
+}
+function openSupps() {
+  renderSuppRows();
+  document.getElementById("suppSheet").showModal();
+}
+let suppEdit = false;
+function renderSuppRows() {
+  const key = activeKey();
+  const list = state.suppsList;
+  document.getElementById("suppEditBtn").hidden = !list.length;
+  document.getElementById("suppEditBtn").textContent = suppEdit ? "Fertig" : "Bearbeiten";
+  document.getElementById("suppRows").innerHTML = list.length ? list.map(n => {
+    const done = suppTaken(key, n);
+    const del = suppEdit ? `<button type="button" class="x-del" onclick="delSupp('${esc(n).replace(/'/g,"\\'")}')" aria-label="löschen">✕</button>` : "";
+    return `<li class="${done ? "x-done" : ""}">
+      <button type="button" class="x-row-btn" onclick="toggleSupp('${esc(n).replace(/'/g,"\\'")}')">
+        <span class="x-check">${done ? "✓" : ""}</span><span class="x-name">${esc(n)}</span></button>${del}</li>`;
+  }).join("") : `<p class="empty">Noch keine Supplemente — füge deine hinzu (z. B. Kreatin, Vitamin D, Omega-3).</p>`;
+}
+function toggleSupp(name) {
+  const key = activeKey();
+  setSuppTaken(key, name, !suppTaken(key, name));
+  save(); renderSuppRows(); renderHeute();
+}
+function addSupp() {
+  const n = prompt("Supplement (z. B. Kreatin, Vitamin D, Omega-3, Whey):");
+  if (!n || !n.trim()) return;
+  if (!state.suppsList.some(x => x.toLowerCase() === n.trim().toLowerCase())) state.suppsList.push(n.trim());
+  save(); renderSuppRows(); renderHeute();
+}
+function toggleSuppEdit() { suppEdit = !suppEdit; renderSuppRows(); }
+function delSupp(name) {
+  state.suppsList = state.suppsList.filter(x => x !== name);
+  save(); renderSuppRows(); renderHeute();
 }
 
 /* ══════════════ Heute rendern ══════════════ */
@@ -1442,7 +1599,7 @@ function goalReached(id, key) {
     case "weight": return weightOn(key) != null;
     case "steps": return (state.steps[key] || 0) >= 10000;
     case "gebete": return (state.gebete[key] || 0) >= 5;
-    case "supps": return !!state.supps[key];
+    case "supps": return state.suppsList.length ? state.suppsList.every(n => suppTaken(key, n)) : !!state.supps[key];
   }
   return false;
 }
@@ -1583,6 +1740,9 @@ function renderVerlauf() {
   renderScore();
   renderKonsistenz();
   renderDiary();
+  const measDates = Object.keys(state.measures).filter(k => state.measures[k] && Object.keys(state.measures[k]).length);
+  document.getElementById("measAcc").hidden = measDates.length < 2;
+  if (!document.getElementById("measAcc").hidden && document.getElementById("measAcc").open) renderMeasCharts();
   renderWeekReport();
   renderVerlaufCharts();
   renderWeightTable();
@@ -1840,6 +2000,29 @@ function mkSvg(W, H, inner) {
   svg.setAttribute("role", "img");
   svg.innerHTML = inner;
   return svg;
+}
+
+
+function renderMeasCharts() {
+  const box = document.getElementById("measCharts");
+  const dates = Object.keys(state.measures).filter(k => state.measures[k]).sort();
+  const cols = { waist:"var(--c-supp)", chest:"var(--c-train)", arm:"var(--c-gebet)", thigh:"var(--c-steps)", hip:"var(--c-sleep)" };
+  let html = "";
+  MEASURE_DEFS.forEach(([f, label]) => {
+    const pts = dates.filter(d => state.measures[d][f] != null).map(d => ({ date: d, v: state.measures[d][f] }));
+    if (pts.length < 2) return;
+    const first = pts[0].v, last = pts[pts.length - 1].v, diff = last - first;
+    html += `<div style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;align-items:baseline">
+      <b style="color:${cols[f]}">${label}</b>
+      <span class="hint" style="margin:0">${fmtNum(last,1)} cm · <span style="color:${diff<=0?"var(--good-text)":"var(--over)"}">${diff<=0?"−":"+"}${fmtNum(Math.abs(diff),1)} cm</span> seit Start</span></div>
+      <div class="chartbox" id="meas-${f}"></div></div>`;
+  });
+  box.innerHTML = html || `<p class="empty">Trag an ≥2 Tagen Maße ein — dann erscheinen hier die Kurven.</p>`;
+  MEASURE_DEFS.forEach(([f, label]) => {
+    const pts = dates.filter(d => state.measures[d][f] != null).map(d => ({ label: fmtDate(d), val: state.measures[d][f] }));
+    if (pts.length < 2) return;
+    drawBars("meas-" + f, pts, { color: cols[f], unit: " cm", decimals: 1, labelEvery: Math.max(1, Math.ceil(pts.length / 5)) });
+  });
 }
 
 /* ══════════════ Fotos (IndexedDB, nur lokal) ══════════════ */

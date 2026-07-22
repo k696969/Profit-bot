@@ -475,38 +475,48 @@
   <!-- ════════ TAB: TRAINING ════════ -->
   <section id="tab-training" hidden>
     <div class="chips" id="twSubNav" style="margin-bottom:12px"></div>
+
     <div id="tw-log">
-    <div class="card" id="weekplanCard" hidden>
-      <h2>📅 Wochenrhythmus</h2>
-      <div id="weekplanList"></div>
+      <div class="card" id="todayTrainCard">
+        <h2 id="todayTrainTitle">Heute dran</h2>
+        <p class="hint" id="todayTrainSub" style="margin:0 0 12px"></p>
+        <button class="btn" id="todayStartBtn" style="width:100%" onclick="startTodaysPlan()">▶ Training starten</button>
+        <button class="btn ghost" style="width:100%;margin-top:8px" onclick="openSheet('trainSheet')">＋ Freies Training</button>
+      </div>
+
+      <div class="card">
+        <h2>💪 Fortschritt pro Übung</h2>
+        <div id="exProgress"></div>
+      </div>
+
+      <details class="acc">
+        <summary>📒 Verlauf &amp; mehr</summary>
+        <div class="statrow" id="twStats" style="margin-bottom:12px"></div>
+        <div class="dotgrid" id="dotGrid" style="margin-bottom:8px"></div>
+        <p class="hint" style="line-height:2;margin-bottom:14px"><span class="dotlegend" style="background:var(--c-train);margin-left:0"></span>Kraft<span class="dotlegend" style="background:#ff9f0a"></span>Kampf<span class="dotlegend" style="background:var(--c-steps)"></span>Cardio<span class="dotlegend" style="background:var(--muted)"></span>Sonst</p>
+        <div id="plansCard" hidden style="margin-bottom:14px">
+          <b style="font-size:14px">📋 Meine Pläne</b>
+          <div id="plansList" style="margin-top:6px"></div>
+        </div>
+        <div style="display:flex;gap:16px;margin-bottom:14px">
+          <button type="button" class="linkbtn" onclick="showTwView('plaene')">📋 Fertige Vorlagen</button>
+          <button type="button" class="linkbtn" onclick="showTwView('analyse')">🔬 Detail-Analyse</button>
+        </div>
+        <b style="font-size:14px">Letzte Einheiten</b>
+        <div id="workoutList" style="margin-top:6px"></div>
+        <p class="empty" id="workoutEmpty">Noch keine Einheiten — trag dein erstes Training ein! 🏋️</p>
+      </details>
     </div>
-    <div class="statrow" id="twStats"></div>
-    <div class="card">
-      <h2>Letzte 4 Wochen</h2>
-      <div class="dotgrid" id="dotGrid"></div>
-      <p class="hint" style="line-height:2"><span class="dotlegend" style="background:var(--c-train);margin-left:0"></span>Kraftsport<span class="dotlegend" style="background:#ff9f0a"></span>Kampfsport<span class="dotlegend" style="background:var(--c-steps)"></span>Cardio<span class="dotlegend" style="background:var(--muted)"></span>Sonstiges</p>
-    </div>
-    <p style="margin:0 0 12px"><button class="btn" style="width:100%" onclick="openSheet('trainSheet')">＋ Training eintragen</button></p>
-    <div class="card" id="plansCard" hidden>
-      <h2>📋 Meine Pläne</h2>
-      <div id="plansList"></div>
-      <p class="hint">Plan antippen → Übungen stehen drin, Gewichte & Wiederholungen sind vom letzten Mal vorausgefüllt.</p>
-    </div>
-    <div class="card" id="exStatCard" hidden>
-      <h2 style="color:var(--c-train)">📈 Übungs-Statistik</h2>
-      <select id="exStatSel" onchange="renderExStats()" aria-label="Übung wählen"></select>
-      <div class="statrow" id="exStatRow" style="margin:12px 0"></div>
-      <div class="chartbox" id="exStatChart"><div class="viz-tip"></div></div>
-      <p class="hint">Schwerster Satz pro Einheit — so siehst du deine Steigerung über Monate.</p>
-      <ul class="exhist" id="exHist"></ul>
-    </div>
-    <div id="workoutList"></div>
-    <p class="empty" id="workoutEmpty" style="padding:0 4px">Noch keine Einheiten — trag dein erstes Training ein! 🏋️</p>
-    </div>
-    <div id="tw-plaene" hidden></div>
+
     <div id="tw-uebungen" hidden></div>
-    <div id="tw-analyse" hidden></div>
     <div id="tw-wissen" hidden></div>
+    <div id="tw-plaene" hidden></div>
+    <div id="tw-analyse" hidden></div>
+    <!-- versteckter Container für den Übungs-Chart (wird aus dem Info-Sheet genutzt) -->
+    <div id="exStatCard" hidden>
+      <select id="exStatSel" onchange="renderExStats()"></select>
+      <div id="exStatRow"></div><div id="exStatChart"></div><ul id="exHist"></ul>
+    </div>
   </section>
 
   <!-- ════════ TAB: STATISTIK ════════ -->
@@ -1685,9 +1695,87 @@ function delWorkout(id) {
   state.workouts = state.workouts.filter(w => w.id !== id);
   save(); renderTraining(); renderHeute();
 }
+
+/* ── Heute dran (aus Wochenrhythmus) + Start ── */
+function planForActivity(txt) {
+  if (!txt) return null;
+  const t = txt.toLowerCase();
+  return state.plans.find(p => {
+    const n = p.name.toLowerCase();
+    if (t.includes("tag 1") && n.includes("tag 1")) return true;
+    if (t.includes("tag 2") && n.includes("tag 2")) return true;
+    if (t.includes("tag 3") && n.includes("tag 3")) return true;
+    return false;
+  }) || null;
+}
+let todaysPlanId = null;
+function renderTodayTrain() {
+  const idx = (new Date().getDay() + 6) % 7;
+  const row = (state.weekplan && state.weekplan.length) ? state.weekplan[idx] : null;
+  const title = document.getElementById("todayTrainTitle");
+  const sub = document.getElementById("todayTrainSub");
+  const btn = document.getElementById("todayStartBtn");
+  const doneToday = workoutsOn(todayKey()).length;
+  if (row) {
+    title.textContent = "Heute: " + row[1].replace(/^[^ ]+ /, "");
+    sub.textContent = (row[2] ? row[2] + " · " : "") + (doneToday ? "✓ schon eingetragen" : "");
+    const plan = planForActivity(row[1]);
+    todaysPlanId = plan ? plan.id : null;
+    btn.textContent = plan ? "▶ " + plan.name.split("·").pop().trim() + " starten"
+      : (row[1].includes("Ruhe") ? "😴 Ruhetag — trotzdem eintragen" : "▶ Training starten");
+  } else {
+    title.textContent = "Training eintragen";
+    sub.textContent = doneToday ? "✓ heute schon eingetragen" : "";
+    todaysPlanId = null;
+    btn.textContent = "▶ Training starten";
+  }
+}
+function startTodaysPlan() {
+  openSheet("trainSheet");
+  if (todaysPlanId) applyPlan(todaysPlanId);
+}
+
+/* ── Fortschritt pro Übung: einfache Liste (start → jetzt, Steigerung) ── */
+function exGain(name) {
+  const sess = exSessions(name);
+  if (!sess.length) return null;
+  const topSet = sx => sx.sets.reduce((b, x) => (x.kg > b.kg || (x.kg === b.kg && x.reps > b.reps)) ? x : b, sx.sets[0]);
+  const f = topSet(sess[0]), l = topSet(sess[sess.length - 1]);
+  const bw = f.kg === 0 && l.kg === 0;   // Körpergewichtsübung → Wdh. vergleichen
+  const from = bw ? f.reps : f.kg, to = bw ? l.reps : l.kg;
+  const unit = bw ? " Wdh." : " kg";
+  const diff = to - from;
+  return { from, to, unit, diff, sessions: sess.length, lastDate: sess[sess.length - 1].date, bw };
+}
+function renderExProgress() {
+  const names = (typeof allExerciseNames === "function") ? allExerciseNames() : [];
+  const rows = names.map(n => ({ n, g: exGain(n) })).filter(x => x.g)
+    .sort((a, b) => (a.g.lastDate < b.g.lastDate ? 1 : -1));
+  const box = document.getElementById("exProgress");
+  if (!rows.length) {
+    box.innerHTML = `<p class="empty">Sobald du 1 Übung 2× einträgst, siehst du hier deine Steigerung — Übung antippen für Details.</p>`;
+    return;
+  }
+  box.innerHTML = rows.map(({ n, g }) => {
+    const arrow = g.diff > 0 ? "▲" : g.diff < 0 ? "▼" : "＝";
+    const col = g.diff > 0 ? "var(--good-text)" : g.diff < 0 ? "var(--over)" : "var(--muted)";
+    const delta = g.sessions < 2 ? "1. Einheit"
+      : `${arrow} ${g.diff > 0 ? "+" : g.diff < 0 ? "−" : ""}${fmtNum(Math.abs(g.diff), Math.abs(g.diff) % 1 ? 1 : 0)}${g.unit}`;
+    return `<div class="planrow" style="cursor:pointer" onclick="openExInfo('${esc(n).replace(/'/g,"\\'")}')">
+      <div class="pr-name">${esc(n)}
+        <span class="pr-rx" style="color:${col}">${delta}</span></div>
+      <div class="pr-sub">${fmtNum(g.from, g.from % 1 ? 1 : 0)} → ${fmtNum(g.to, g.to % 1 ? 1 : 0)}${g.unit} · ${g.sessions}× trainiert</div>
+    </div>`;
+  }).join("");
+}
+
+/* ── Übungs-Chart (jetzt im Info-Sheet on demand) ── */
+function renderTraining_stub() {}
+
 function renderTraining() {
   renderTwSub();
-  renderWeekplan();
+  renderTodayTrain();
+  renderExProgress();
   const now = new Date();
   const last7 = [], last28 = [];
   for (let i = 27; i >= 0; i--) {
@@ -1708,7 +1796,6 @@ function renderTraining() {
     `<span class="${byDate[k] ? "t-" + byDate[k] : ""}" title="${fmtDate(k)}"></span>`).join("");
 
   renderPlansCard();
-  renderExStats();
   const list = [...state.workouts].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 30);
   document.getElementById("workoutEmpty").hidden = list.length > 0;
   document.getElementById("workoutList").innerHTML = list.map(w => {
@@ -2090,8 +2177,8 @@ function drawBars(boxId, data, opts) {
   const box = document.getElementById(boxId);
   const card = box.closest(".card, .acc");
   box.querySelectorAll("svg").forEach(s => s.remove());
-  if (!data.some(d => d.val > 0)) { card.hidden = true; return; }
-  card.hidden = false;
+  if (!data.some(d => d.val > 0)) { if (card) card.hidden = true; return; }
+  if (card) card.hidden = false;
   const o = Object.assign({ color: "var(--c-steps)", unit: "", decimals: 0, labelEvery: 3, target: 0 }, opts);
   const W = Math.max(300, box.clientWidth || 320), H = 190;
   const M = { t: 16, r: 14, b: 24, l: 46 };
@@ -2725,10 +2812,11 @@ const WISSEN_QA = [
 /* ── Sub-Navigation im Training-Tab ── */
 let twView = "log";
 function renderTwSub() {
-  const views = [["log","📒 Log"],["plaene","📋 Pläne"],["uebungen","📚 Übungen"],["analyse","🔬 Analyse"],["wissen","🧠 Wissen"]];
+  const views = [["log","🏋️ Training"],["uebungen","📚 Übungen"],["wissen","🧠 Wissen"]];
   document.getElementById("twSubNav").innerHTML = views.map(([v,l]) =>
     `<button type="button" class="${twView===v?"sel":""}" onclick="showTwView('${v}')">${l}</button>`).join("");
-  for (const [v] of views) document.getElementById("tw-" + v).hidden = (twView !== v);
+  ["log","uebungen","wissen","plaene","analyse"].forEach(v =>
+    document.getElementById("tw-" + v).hidden = (twView !== v));
 }
 function showTwView(v) {
   twView = v;
@@ -2810,8 +2898,19 @@ function openExInfo(name) {
         ? `<b style="color:var(--c-gebet)">${fmtNum(pr.best.kg, pr.best.kg % 1 ? 1 : 0)} kg × ${pr.best.reps}</b> (${fmtDate(pr.best.date)}) · ${pr.sessions} Einheiten · zuletzt ${fmtDate(pr.last.date)}`
         : "Noch keine Einträge — leg los! 💪"}</dd>
     </dl>
+    <div id="infoChart" style="margin:6px 0 10px"></div>
     <div class="field"><label>📝 Deine Notizen (Sitzhöhe, Griff, Cues …)</label>
       <input value="${esc(note)}" onchange="saveExNote('${name.replace(/'/g,"\\'")}', this)"></div>`;
+  /* Steigerungs-Chart: schwerster Satz je Einheit (falls ≥2 Einheiten) */
+  const sess = exSessions(name);
+  if (sess.length >= 2) {
+    const data = sess.slice(-20).map(x => ({ label: fmtDate(x.date),
+      val: Math.max(...x.sets.map(st => st.kg > 0 ? st.kg : st.reps)) }));
+    const bw = sess.every(x => x.sets.every(st => st.kg === 0));
+    document.getElementById("infoChart").innerHTML =
+      `<b style="font-size:13px;color:var(--c-train)">📈 Steigerung (${bw ? "Wdh." : "kg"})</b><div class="chartbox" id="infoChartBox"></div>`;
+    drawBars("infoChartBox", data, { color: "var(--c-train)", unit: bw ? "" : " kg", decimals: bw ? 0 : 1, labelEvery: Math.max(1, Math.ceil(data.length / 5)) });
+  }
   document.getElementById("infoSheet").showModal();
 }
 

@@ -310,6 +310,8 @@
   .planrow .pr-rx { font-size: 12.5px; color: var(--c-train); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .planrow .pr-sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
   a.ext { color: var(--accent-deep); text-underline-offset: 2px; }
+  .vidwrap { position: relative; width: 100%; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; background: #000; margin: 6px 0; }
+  .vidwrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 
   /* ── Konsistenz ── */
   .krow { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
@@ -795,6 +797,7 @@ const DEFAULT_STATE = {
   journal: {},          // {date: {mood: 1..5, text}}
   plans: [],            // [{id, name, type, exercises: [Namen oder {name, sets, reps}]}]
   exNotes: {},          // {übungsname_klein: eigene Notiz}
+  exVideos: {},         // {übungsname_klein: video-url}
   weekplan: [],         // [[Tag, Aktivität, Zeit], …] — Wochenrhythmus
   finance: []           // [{id, date, type, amount, cat, note, recur, auto}]
 };
@@ -834,6 +837,7 @@ function load() {
       if (!Array.isArray(s.plans)) s.plans = [];
       if (!s.exNotes || typeof s.exNotes !== "object" || Array.isArray(s.exNotes)) s.exNotes = {};
       if (!Array.isArray(s.weekplan)) s.weekplan = [];
+      if (!s.exVideos || typeof s.exVideos !== "object" || Array.isArray(s.exVideos)) s.exVideos = {};
       /* Migration aus der alten Checklisten-Version */
       if (old.checks && typeof old.checks === "object" && !old._migrated6) {
         const stepsItem = (old.checkItems || []).find(i => i.type === "steps");
@@ -905,7 +909,18 @@ const TRACKERS = [
 ];
 function trackerState(id, key) {
   switch (id) {
-    case "training": { const n = workoutsOn(key).length; return { done: n > 0, val: n ? n + "×" : "–", sub: n ? "eingetragen" : "antippen" }; }
+    case "training": {
+      const n = workoutsOn(key).length;
+      let sub = "antippen";
+      if (n) sub = "eingetragen";
+      else if (state.weekplan && state.weekplan.length) {
+        /* Zeigt automatisch, was laut Wochenrhythmus an diesem Tag ansteht */
+        const idx = (new Date(key + "T12:00:00").getDay() + 6) % 7;
+        const row = state.weekplan[idx];
+        if (row) sub = row[1].length > 24 ? row[1].slice(0, 23) + "…" : row[1];
+      }
+      return { done: n > 0, val: n ? n + "×" : "–", sub };
+    }
     case "sleep": { const h = state.sleep[key]; return { done: h > 0, val: h ? fmtNum(h, h % 1 ? 1 : 0) + " h" : "–", sub: h ? (h >= 7 && h <= 9 ? "top erholt ✨" : "Ziel 7–9 h") : "Ziel 7–9 h" }; }
     case "weight": { const kg = weightOn(key); return { done: kg != null, val: kg != null ? fmtNum(kg, 1) : "–", sub: kg != null ? "kg" : "antippen" }; }
     case "steps": { const n = state.steps[key]; return { done: n > 0, val: n ? fmtNum(n) : "–", sub: n >= 10000 ? "Ziel erreicht 🎯" : "Ziel 10.000" }; }
@@ -2449,7 +2464,7 @@ function renderUebungenView() {
       return `<div class="planrow" style="cursor:pointer" onclick="openExInfo('${name.replace(/'/g,"\\'")}')">
         <div class="pr-name">${db.ico} ${name}
           <span class="pr-rx">${pr && pr.best ? "PR " + fmtNum(pr.best.kg, pr.best.kg % 1 ? 1 : 0) + " kg" : "—"}</span></div>
-        <div class="pr-sub">${db.ziel}${state.exNotes[name.toLowerCase()] ? " · 📝 Notiz" : ""}</div>
+        <div class="pr-sub">${db.ziel}${state.exVideos[name.toLowerCase()] ? " · 🎬 Video" : ""}${state.exNotes[name.toLowerCase()] ? " · 📝 Notiz" : ""}</div>
       </div>`;
     }).join("") + `</div>`;
 }
@@ -2467,7 +2482,7 @@ function openExInfo(name) {
       <dt>Häufige Fehler</dt><dd>${db.fehler}</dd>
       <dt>Studienlage</dt><dd>${db.studien[0]} ${evB(db.studien[1])}<span class="src">${srcLink("→ PubMed-Suche", db.studien[2])}</span></dd>
       <dt>Alternativen</dt><dd>${db.alt}</dd>
-      <dt>Video</dt><dd><a class="ext" target="_blank" rel="noopener" href="${yt(db.video)}">▶ YouTube-Suche: Technik</a></dd>
+      <dt>Video</dt><dd>${videoBlock(name, db)}</dd>
       <dt>Deine PRs</dt><dd>${pr && pr.best
         ? `<b style="color:var(--c-gebet)">${fmtNum(pr.best.kg, pr.best.kg % 1 ? 1 : 0)} kg × ${pr.best.reps}</b> (${fmtDate(pr.best.date)}) · ${pr.sessions} Einheiten · zuletzt ${fmtDate(pr.last.date)}`
         : "Noch keine Einträge — leg los! 💪"}</dd>
@@ -2476,9 +2491,36 @@ function openExInfo(name) {
       <input value="${esc(note)}" onchange="saveExNote('${name.replace(/'/g,"\\'")}', this)"></div>`;
   document.getElementById("infoSheet").showModal();
 }
+
+/* ── Ausführungs-Video pro Übung (eigener Link, eingebettet) ── */
+function ytId(url) {
+  if (!url) return null;
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
+  return m ? m[1] : null;
+}
+function videoBlock(name, db) {
+  const url = state.exVideos[name.toLowerCase()] || "";
+  const id = ytId(url);
+  let html = "";
+  if (id) {
+    html += `<div class="vidwrap"><iframe src="https://www.youtube-nocookie.com/embed/${id}" title="Ausführung ${esc(name)}" allowfullscreen loading="lazy"></iframe></div>`;
+  }
+  html += `<input placeholder="YouTube-Link einfügen …" value="${esc(url)}" onchange="saveExVideo('${name.replace(/'/g,"\\'")}', this)" style="margin-top:4px">`;
+  html += `<div style="margin-top:6px"><a class="ext" target="_blank" rel="noopener" href="${yt(db.video)}">🔎 Passendes Video auf YouTube suchen</a></div>`;
+  return html;
+}
+function saveExVideo(name, input) {
+  const v = input.value.trim();
+  if (v) state.exVideos[name.toLowerCase()] = v; else delete state.exVideos[name.toLowerCase()];
+  save();
+  if (!document.getElementById("tw-uebungen").hidden) renderUebungenView();
+  openExInfo(name); // neu rendern → Player erscheint/verschwindet
+}
+
 function saveExNote(name, input) {
   state.exNotes[name.toLowerCase()] = input.value.trim();
   save();
+  if (!document.getElementById("tw-uebungen").hidden) renderUebungenView();
 }
 
 /* ── Ansicht: Wissen ── */

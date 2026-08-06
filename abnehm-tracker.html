@@ -210,6 +210,11 @@
   .exblock { border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
   .setrow { display: grid; grid-template-columns: 44px 1fr 1fr 64px; gap: 8px; align-items: center; }
   .setrow .sn { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .negbtn {
+    appearance: none; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2);
+    cursor: pointer; font: inherit; font-weight: 800; font-size: 15px;
+    width: 34px; min-height: 48px; border-radius: 10px; flex: none;
+  }
   .setrow .sl {
     font-size: 11.5px; color: var(--muted); text-align: right;
     font-variant-numeric: tabular-nums; line-height: 1.25; white-space: nowrap;
@@ -785,6 +790,9 @@
   <option value="Push Press"></option><option value="Trap Bar Kreuzheben"></option>
   <option value="Medizinball-Slams"></option><option value="Box Jumps"></option>
   <option value="Pallof Press"></option><option value="Hängendes Beinheben"></option><option value="Farmer's Walk"></option>
+  <option value="Breites Rudern"></option><option value="Bizeps SZ-Stange"></option><option value="Hammercurls"></option>
+  <option value="Trizeps SZ-Stange"></option><option value="Rumänisches Kreuzheben"></option>
+  <option value="Bulgarian Split Squats"></option><option value="Beinheben hängend"></option>
 </datalist>
 
 <dialog class="sheet" id="finSheet">
@@ -1160,7 +1168,7 @@ function waterMinus(ev) {
 function strengthProgress() {
   /* Ø Steigerung des besten Satzes je Übung seit der ersten Einheit.
      Score = kg>0 ? geschätztes 1RM (Epley) : Wiederholungen (Körpergewicht). */
-  const score = set => set.kg > 0 ? set.kg * (1 + set.reps / 30) : set.reps;
+  const score = set => set.kg > 0 ? set.kg * (1 + set.reps / 30) : set.reps; // negatives kg (Hilfe) → Wdh. zählen
   const names = (typeof allExerciseNames === "function") ? allExerciseNames() : [];
   const rels = [];
   names.forEach(n => {
@@ -1616,7 +1624,10 @@ function renderExList() {
           <div class="setrow">
             <span class="sn">Satz ${j + 1}</span>
             <input class="in-reps" type="number" min="0" max="500" inputmode="numeric" placeholder="Wdh." value="${s.reps || ""}" oninput="setDelta(this)">
-            <input class="in-kg" type="number" step="0.5" min="0" max="1000" inputmode="decimal" placeholder="kg" value="${s.kg || ""}" oninput="setDelta(this)">
+            <span style="display:flex;gap:4px;min-width:0">
+              <input class="in-kg" type="number" step="0.5" min="-200" max="1000" inputmode="decimal" placeholder="kg" value="${s.kg || ""}" oninput="setDelta(this)" style="min-width:0">
+              <button type="button" class="negbtn" onclick="toggleNeg(this)" title="Minus = Unterstützung (z. B. Klimmzug-Maschine)">±</button>
+            </span>
             <span class="sl" ${l ? `data-kg="${l.kg}" data-reps="${l.reps}" data-base="${base}" title="Letztes Training"` : ""}>${base}</span>
           </div>`;
         }).join("")}
@@ -1629,6 +1640,15 @@ function renderExList() {
   }).join("");
   /* Delta-Pfeile für bereits vorbefüllte Werte sofort anzeigen */
   document.querySelectorAll("#exList .in-kg").forEach(inp => setDelta(inp));
+}
+/* ± : Vorzeichen umschalten — negativ = Unterstützung (assistierte Klimmzüge/Dips) */
+function toggleNeg(btn) {
+  const input = btn.parentElement.querySelector(".in-kg");
+  const v = parseFloat((input.value || "").replace(",", "."));
+  if (isFinite(v) && v !== 0) {
+    input.value = -v;
+    setDelta(input);
+  }
 }
 /* Live-Vergleich: aktueller Satz vs. letztes Training (▲ Steigerung / ▼ weniger) */
 function setDelta(input) {
@@ -1670,7 +1690,7 @@ function lastTimeText(name) {
     if (w.date === activeKey()) continue;
     const ex = (w.exercises || []).find(e => e.name.toLowerCase() === n);
     if (ex && ex.sets.length) {
-      const s = ex.sets.map(x => `${fmtNum(x.kg, x.kg % 1 ? 1 : 0)} kg × ${x.reps}`).join(", ");
+      const s = ex.sets.map(x => `${fmtNum(x.kg, x.kg % 1 ? 1 : 0)} kg${x.kg < 0 ? " (Hilfe)" : ""} × ${x.reps}`).join(", ");
       return `Letztes Mal (${fmtDate(w.date)}): ${s}`;
     }
   }
@@ -2972,40 +2992,48 @@ function renderWissenView() {
 /* ── Fest eingebauter persönlicher Plan (einmaliges Seeding, überschreibt nichts) ── */
 const USER_PLAN_SEED = [
   { name: "Gym Tag 1 · Rücken/Bizeps", type: "kraft", exercises: [
-    { name: "Klimmzüge", sets: 3, reps: "6–10" },
-    { name: "Rudern (Langhantel)", sets: 3, reps: "8–10" },
-    { name: "Enges Rudern", sets: 3, reps: "10–12" },
+    { name: "Klimmzüge", sets: 3, reps: "max" },
+    { name: "Enges Rudern", sets: 2, reps: "8–12" },
+    { name: "Breites Rudern", sets: 2, reps: "8–12" },
     { name: "Hyperextensions", sets: 2, reps: "12–15" },
-    { name: "Bizeps-Curls (Kurzhantel)", sets: 3, reps: "10–12" },
-    { name: "Hammer Curls", sets: 2, reps: "10–12" }]},
+    { name: "Bizeps SZ-Stange", sets: 2, reps: "8–12" },
+    { name: "Hammercurls", sets: 2, reps: "8–12" }]},
   { name: "Gym Tag 2 · Brust/Schulter/Trizeps", type: "kraft", exercises: [
-    { name: "Schrägbankdrücken", sets: 4, reps: "6–10" },
-    { name: "Dips", sets: 3, reps: "8–12" },
-    { name: "Schulterdrücken (Kurzhantel)", sets: 3, reps: "6–10" },
-    { name: "Butterfly", sets: 2, reps: "12–15" },
-    { name: "Seitheben", sets: 3, reps: "12–15" },
-    { name: "Reverse Butterfly", sets: 2, reps: "12–15" }]},
-  { name: "Gym Tag 3 · Athletik", type: "kraft", exercises: [
-    { name: "Push Press", sets: 4, reps: "3–5 explosiv" },
-    { name: "Trap Bar Kreuzheben", sets: 4, reps: "5" },
-    { name: "Medizinball-Slams", sets: 3, reps: "5/Seite" },
-    { name: "Farmer's Walk", sets: 3, reps: "30–40 m" },
-    { name: "Box Jumps", sets: 3, reps: "5" },
-    { name: "Pallof Press", sets: 3, reps: "10/Seite" },
-    { name: "Hängendes Beinheben", sets: 3, reps: "10–15" }]}
+    { name: "Schrägbankdrücken", sets: 3, reps: "8–12" },
+    { name: "Dips", sets: 3, reps: "max" },
+    { name: "Butterfly", sets: 2, reps: "10–15" },
+    { name: "Seitheben", sets: 2, reps: "12–15" },
+    { name: "Reverse Butterfly", sets: 2, reps: "12–15" },
+    { name: "Trizeps SZ-Stange", sets: 2, reps: "8–12" }]},
+  { name: "Gym Tag 3 · Beine/Athletik", type: "kraft", exercises: [
+    { name: "Kniebeugen", sets: 3, reps: "6–10" },
+    { name: "Rumänisches Kreuzheben", sets: 3, reps: "8–12" },
+    { name: "Bulgarian Split Squats", sets: 2, reps: "8–12/Bein" },
+    { name: "Wadenheben", sets: 2, reps: "12–20" },
+    { name: "Beinheben hängend", sets: 2, reps: "10–15" },
+    { name: "Plank", sets: 2, reps: "45–60 Sek" }]}
 ];
 const WEEKPLAN_SEED = [
   ["Mo", "🥋 Ringen + Luta Livre", "18–20 Uhr"],
-  ["Di", "🏋️ Gym Tag 2 · Brust/Schulter/Trizeps", ""],
-  ["Mi", "🏋️ Gym Tag 1 · Rücken/Bizeps", ""],
+  ["Di", "🏋️ Gym Tag 1 · Rücken/Bizeps", ""],
+  ["Mi", "🏋️ Gym Tag 2 · Brust/Schulter/Trizeps", ""],
   ["Do", "🥊 Muay Thai + Luta Livre", "18–20 Uhr"],
   ["Fr", "🥋 Ringen", "18–20 Uhr"],
-  ["Sa", "⚡ Gym Tag 3 · Athletik", ""],
-  ["So", "😴 Ruhetag", ""]
+  ["Sa", "🦵 Gym Tag 3 · Beine/Athletik", ""],
+  ["So", "😴 Frei / Erholung", ""]
 ];
 function seedUserData() {
   let changed = false;
+  if (state._seedV1 && !state._seedV2) {
+    /* Plan-Update: alte vorinstallierte Gym-Tage durch neue Version
+       ersetzen — Trainings-Historie & eigene Pläne bleiben unberührt */
+    state.plans = state.plans.filter(p => !/^Gym Tag [123] /.test(p.name));
+    USER_PLAN_SEED.forEach(p => state.plans.push({ id: uid(), name: p.name, type: p.type, exercises: p.exercises }));
+    state.weekplan = WEEKPLAN_SEED;
+    state._seedV2 = true; changed = true;
+  }
   if (!state._seedV1) {
+    state._seedV2 = true;
     USER_PLAN_SEED.forEach(p => {
       if (!state.plans.some(x => x.name === p.name)) {
         state.plans.push({ id: uid(), name: p.name, type: p.type, exercises: p.exercises });
@@ -3040,10 +3068,10 @@ const MUSKEL_KEYS = [
   ["Core", ["bauch", "crunch", "plank", "beinheben", "carry", "get-up", "swing", "pallof", "slam", "rotation", "ab-wheel", "walk"]],
   ["Schultern", ["seithe", "schulterdr", "reverse", "press", "face", "military", "delt"]],
   ["Brust", ["bank", "dip", "brust", "fliegende", "liegest", "butterfly"]],
+  ["Beine", ["kniebeu", "beinpresse", "squat", "goblet", "ausfall", "beinstr", "beinbeu", "wade", "hip thrust", "nordic", "jump", "sprung", "rumän", "bulgar", "split"]],
   ["Rücken", ["klimm", "ruder", "latzug", "row", "kreuzheb", "hang", "pull", "hyperext"]],
   ["Bizeps", ["curl", "bizeps"]],
-  ["Trizeps", ["trizeps", "stirndr", "pushdown"]],
-  ["Beine", ["kniebeu", "beinpresse", "squat", "goblet", "ausfall", "beinstr", "beinbeu", "wade", "hip thrust", "nordic", "jump", "sprung"]]
+  ["Trizeps", ["trizeps", "stirndr", "pushdown"]]
 ];
 function muskelFuer(name) {
   const n = name.toLowerCase();

@@ -40,6 +40,7 @@
     --c-gebet: #ffd60a;  --w-gebet: rgba(255, 214, 10, 0.13);
     --c-supp: #ff375f;   --w-supp: rgba(255, 55, 95, 0.14);
     --c-kcal: #ff9f0a;   --w-kcal: rgba(255, 159, 10, 0.14);
+    --c-prot: #bf5af2;   /* Protein */
     --brand: #c8ff00;    /* Signature-Akzent */
     --grad-hero: linear-gradient(135deg, #34e07a, #64d2ff);
     --grad-brand: linear-gradient(135deg, #34e07a, #0fb56f);
@@ -622,6 +623,10 @@
       <div class="chartbox" id="kcalChart"><div class="viz-tip"></div></div>
     </details>
     <details class="acc" ontoggle="if(this.open && window.renderVerlaufCharts) setTimeout(renderVerlaufCharts, 40)">
+      <summary>🥩 Protein</summary>
+      <div class="chartbox" id="protChart"><div class="viz-tip"></div></div>
+    </details>
+    <details class="acc" ontoggle="if(this.open && window.renderVerlaufCharts) setTimeout(renderVerlaufCharts, 40)">
       <summary>💧 Wasser</summary>
       <div class="chartbox" id="waterChart"><div class="viz-tip"></div></div>
     </details>
@@ -799,13 +804,23 @@
   <div class="sheet-inner">
     <div class="sheet-grip"></div>
     <h3>🍽️ Kalorien</h3>
-    <div style="text-align:center;margin-bottom:14px">
-      <div style="font-size:40px;font-weight:850;color:var(--c-kcal);font-variant-numeric:tabular-nums" id="kcalTotal">0</div>
-      <div class="hint" style="margin:0" id="kcalDayLbl">kcal heute</div>
+    <div style="display:flex;gap:10px;margin-bottom:14px;text-align:center">
+      <div style="flex:1">
+        <div style="font-size:34px;font-weight:900;color:var(--c-kcal);font-variant-numeric:tabular-nums" id="kcalTotal">0</div>
+        <div class="hint" style="margin:0" id="kcalDayLbl">kcal heute</div>
+      </div>
+      <div style="flex:1;border-left:1px solid var(--line)">
+        <div style="font-size:34px;font-weight:900;color:var(--c-prot);font-variant-numeric:tabular-nums" id="protTotal">0</div>
+        <div class="hint" style="margin:0" id="protGoalLbl">g Protein</div>
+      </div>
     </div>
     <form onsubmit="addKcal(event)" style="display:flex;flex-direction:column;gap:10px">
-      <div class="field"><label for="kcalInput">Mahlzeit hinzufügen (kcal)</label>
-        <input id="kcalInput" type="number" step="1" min="0" max="20000" inputmode="numeric" placeholder="z. B. 650"></div>
+      <div class="row2">
+        <div class="field"><label for="kcalInput">Kalorien</label>
+          <input id="kcalInput" type="number" step="1" min="0" max="20000" inputmode="numeric" placeholder="z. B. 650"></div>
+        <div class="field"><label for="protInput">Protein (g)</label>
+          <input id="protInput" type="number" step="1" min="0" max="500" inputmode="numeric" placeholder="z. B. 45"></div>
+      </div>
       <button class="btn" type="submit">＋ Dazurechnen</button>
       <div style="display:flex;gap:8px">
         <button type="button" class="btn ghost" style="flex:1" onclick="setKcalTotal()">Tagessumme setzen</button>
@@ -945,6 +960,7 @@ const DEFAULT_STATE = {
   steps: {},            // {date: anzahl}
   water: {},            // {date: liter}
   kcal: {},             // {date: kalorien}
+  protein: {},          // {date: gramm}
   gebete: {},           // {date: 0..5}
   supps: {},            // {date: true}
   extras: [],           // [{id, name}] eigene Tagesziele
@@ -1000,6 +1016,7 @@ function load() {
       if (!Array.isArray(s.suppsList)) s.suppsList = [];
       if (!s.water || typeof s.water !== "object" || Array.isArray(s.water)) s.water = {};
       if (!s.kcal || typeof s.kcal !== "object" || Array.isArray(s.kcal)) s.kcal = {};
+      if (!s.protein || typeof s.protein !== "object" || Array.isArray(s.protein)) s.protein = {};
       /* Migration aus der alten Checklisten-Version */
       if (old.checks && typeof old.checks === "object" && !old._migrated6) {
         const stepsItem = (old.checkItems || []).find(i => i.type === "steps");
@@ -1106,8 +1123,12 @@ function trackerState(id, key) {
     case "steps": { const n = state.steps[key]; return { done: n > 0, val: n ? fmtNum(n) : "–", sub: n >= 10000 ? "Ziel erreicht 🎯" : "Ziel 10.000" }; }
     case "gebete": { const n = gebeteCount(key); return { done: n >= 5, val: n + "/5", sub: n >= 5 ? "alle gebetet ✨" : "antippen" }; }
     case "kcal": {
-      const c = state.kcal[key];
-      return { done: c > 0, val: c > 0 ? fmtNum(c) : "–", sub: c > 0 ? "kcal gegessen" : "antippen" };
+      const c = state.kcal[key], p = state.protein[key] || 0, pg = proteinGoal();
+      let sub = "antippen";
+      if (c > 0 || p > 0) {
+        sub = pg ? `${fmtNum(p)}/${fmtNum(pg)} g Protein${p >= pg ? " ✓" : ""}` : `${fmtNum(p)} g Protein`;
+      }
+      return { done: c > 0, val: c > 0 ? fmtNum(c) : "–", sub };
     }
     case "water": { const l = state.water[key] || 0; return { done: l >= WATER_GOAL, val: fmtNum(l, 2) + " L", sub: l >= WATER_GOAL ? "Ziel erreicht 💧" : "Ziel " + fmtNum(WATER_GOAL, 1) + " L" }; }
     case "supps": {
@@ -1367,8 +1388,15 @@ function coachLine(key, done, total, w, sw, goal, dn) {
 }
 
 /* ══════════════ Kalorien + echter Verbrauch (TDEE) ══════════════ */
+/* Proteinziel: 1,6 g/kg Körpergewicht — belegtes Optimum für Muskelerhalt
+   im Defizit (Morton 2018, Meta-Analyse über 49 Studien) */
+function proteinGoal() {
+  const w = currentWeight();
+  return w ? Math.round(w * 1.6) : null;
+}
 function openKcal() {
   document.getElementById("kcalInput").value = "";
+  document.getElementById("protInput").value = "";
   renderKcalSheet();
   document.getElementById("kcalSheet").showModal();
 }
@@ -1377,26 +1405,36 @@ function renderKcalSheet() {
   document.getElementById("kcalTotal").textContent = fmtNum(state.kcal[key] || 0);
   document.getElementById("kcalDayLbl").textContent =
     "kcal " + (key === todayKey() ? "heute" : "am " + fmtDate(key));
+  const p = state.protein[key] || 0, pg = proteinGoal();
+  document.getElementById("protTotal").textContent = fmtNum(p);
+  document.getElementById("protGoalLbl").textContent =
+    pg ? "g Protein · Ziel " + fmtNum(pg) : "g Protein";
 }
 function addKcal(ev) {
   ev.preventDefault();
-  const inp = document.getElementById("kcalInput");
+  const inp = document.getElementById("kcalInput"), pin = document.getElementById("protInput");
   const v = parseInt((inp.value || "").replace(",", "."), 10);
-  if (!isFinite(v) || v <= 0) return;
+  const p = parseInt((pin.value || "").replace(",", "."), 10);
   const key = activeKey();
-  state.kcal[key] = (state.kcal[key] || 0) + v;
-  save(); inp.value = ""; renderKcalSheet(); renderHeute();
+  let any = false;
+  if (isFinite(v) && v > 0) { state.kcal[key] = (state.kcal[key] || 0) + v; any = true; }
+  if (isFinite(p) && p > 0) { state.protein[key] = (state.protein[key] || 0) + p; any = true; }
+  if (!any) return;
+  save(); inp.value = ""; pin.value = ""; renderKcalSheet(); renderHeute();
 }
 function setKcalTotal() {
-  const inp = document.getElementById("kcalInput");
+  const inp = document.getElementById("kcalInput"), pin = document.getElementById("protInput");
   const v = parseInt((inp.value || "").replace(",", "."), 10);
-  if (!isFinite(v) || v < 0) { alert("Trag zuerst die Tagessumme ins Feld ein."); return; }
+  const p = parseInt((pin.value || "").replace(",", "."), 10);
   const key = activeKey();
-  if (v > 0) state.kcal[key] = v; else delete state.kcal[key];
-  save(); inp.value = ""; renderKcalSheet(); renderHeute();
+  if (!isFinite(v) && !isFinite(p)) { alert("Trag zuerst die Tagessumme in ein Feld ein."); return; }
+  if (isFinite(v)) { if (v > 0) state.kcal[key] = v; else delete state.kcal[key]; }
+  if (isFinite(p)) { if (p > 0) state.protein[key] = p; else delete state.protein[key]; }
+  save(); inp.value = ""; pin.value = ""; renderKcalSheet(); renderHeute();
 }
 function clearKcal() {
   delete state.kcal[activeKey()];
+  delete state.protein[activeKey()];
   save(); renderKcalSheet(); renderHeute();
 }
 
@@ -1645,6 +1683,7 @@ function daySummaryAuto(key) {
   if (gebeteCount(key)) parts.push("🤲 " + gebeteCount(key) + "/5");
   if (state.water[key]) parts.push("💧 " + fmtNum(state.water[key], 2) + " L");
   if (state.kcal[key]) parts.push("🍽️ " + fmtNum(state.kcal[key]) + " kcal");
+  if (state.protein[key]) parts.push("🥩 " + fmtNum(state.protein[key]) + " g P");
   if (state.supps[key]) parts.push("💊✓");
   return parts.join(" · ");
 }
@@ -1683,6 +1722,7 @@ function computeStreak() {
   for (const k of Object.keys(state.supps)) if (state.supps[k]) tracked.add(k);
   for (const [k, v] of Object.entries(state.water)) if (v > 0) tracked.add(k);
   for (const [k, v] of Object.entries(state.kcal)) if (v > 0) tracked.add(k);
+  for (const [k, v] of Object.entries(state.protein)) if (v > 0) tracked.add(k);
   for (const [k, day] of Object.entries(state.extrasDone)) if (Object.values(day || {}).some(Boolean)) tracked.add(k);
   const d = new Date();
   if (!tracked.has(keyOf(d))) d.setDate(d.getDate() - 1);
@@ -2287,6 +2327,8 @@ function renderVerlaufCharts() {
   const tEst = tdeeEstimate();
   drawBars("kcalChart", days14.map(k => ({ label: fmtDate(k), val: state.kcal[k] || 0 })),
     { target: tEst.ready ? tEst.tdee : 0, color: "var(--c-kcal)", unit: " kcal" });
+  drawBars("protChart", days14.map(k => ({ label: fmtDate(k), val: state.protein[k] || 0 })),
+    { target: proteinGoal() || 0, color: "var(--c-prot)", unit: " g" });
   drawBars("waterChart", days14.map(k => ({ label: fmtDate(k), val: state.water[k] || 0 })),
     { target: WATER_GOAL, color: "var(--c-steps)", unit: " L", decimals: 2 });
   const weeks = [];
@@ -2307,6 +2349,7 @@ function renderWeekReport() {
   const gebetSum = keys.reduce((s, k) => s + gebeteCount(k), 0);
   const waterVals = keys.map(k => state.water[k]).filter(v => v > 0);
   const kcalVals = keys.map(k => state.kcal[k]).filter(v => v > 0);
+  const protVals = keys.map(k => state.protein[k]).filter(v => v > 0);
   const suppDays = keys.filter(k => state.supps[k]).length;
   const wWeek = state.weights.filter(x => keys.includes(x.date));
   const wDelta = wWeek.length >= 2 ? wWeek[wWeek.length - 1].kg - wWeek[0].kg : null;
@@ -2320,6 +2363,7 @@ function renderWeekReport() {
     ["Ø Schritte", stepVals.length ? fmtNum(stepVals.reduce((a, b) => a + b) / stepVals.length) : "–"],
     ["Gebete", gebetSum + " / 35"],
     ["Ø Kalorien", kcalVals.length ? fmtNum(Math.round(kcalVals.reduce((a,b)=>a+b)/kcalVals.length)) + " kcal" : "–"],
+    ["Ø Protein", protVals.length ? fmtNum(Math.round(protVals.reduce((a,b)=>a+b)/protVals.length)) + " g" + (proteinGoal() ? " / " + fmtNum(proteinGoal()) : "") : "–"],
     ["Ø Wasser", waterVals.length ? fmtNum(waterVals.reduce((a,b)=>a+b)/waterVals.length, 2) + " L" : "–"],
     ["Supplemente", suppDays + " von 7 Tagen"],
     ["Gewicht", wDelta != null ? (wDelta <= 0 ? "−" : "+") + fmtNum(Math.abs(wDelta), 1) + " kg" : "–"],

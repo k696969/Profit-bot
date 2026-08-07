@@ -1280,13 +1280,19 @@ function waterMinus(ev) {
 /* ══════════════ Fortschritt: Kilos runter + Kraft rauf ══════════════ */
 function strengthProgress() {
   /* Ø Steigerung des besten Satzes je Übung seit der ersten Einheit.
-     Score = kg>0 ? geschätztes 1RM (Epley) : Wiederholungen (Körpergewicht). */
-  const score = set => set.kg > 0 ? set.kg * (1 + set.reps / 30) : set.reps; // negatives kg (Hilfe) → Wdh. zählen
+     Körpergewichtsübungen: echte Last = Körpergewicht + kg (negativ = Hilfe),
+     damit −14 kg Hilfe → 0 kg korrekt als Steigerung zählt. */
+  const bw = currentWeight() || 80;
+  const scoreFor = name => set => {
+    if (isBodyweightEx(name)) return Math.max(1, bw + set.kg) * (1 + set.reps / 30);
+    return set.kg > 0 ? set.kg * (1 + set.reps / 30) : set.reps;
+  };
   const names = (typeof allExerciseNames === "function") ? allExerciseNames() : [];
   const rels = [];
   names.forEach(n => {
     const sess = exSessions(n);
     if (sess.length < 2) return;
+    const score = scoreFor(n);
     const top = sx => Math.max(...sx.sets.map(score));
     const first = top(sess[0]), last = top(sess[sess.length - 1]);
     if (first > 0) rels.push(last / first - 1);
@@ -1808,6 +1814,9 @@ const WORKOUT_INT = { locker: "Locker", moderat: "Moderat", hart: "Intensiv" };
 let twDraft = { type: "kraft", intensity: "moderat", exercises: [] };
 
 function initWorkoutSheet() {
+  editingWorkoutId = null;
+  const h = document.getElementById("trainSheet").querySelector("h3");
+  if (h) h.textContent = "Training eintragen";
   twDraft = { type: "kraft", intensity: "moderat", exercises: [] };
   document.getElementById("twMin").value = 60;
   document.getElementById("exList").innerHTML = "";
@@ -1919,6 +1928,7 @@ function renderExList() {
       <input class="exname-in" list="exNames" placeholder="Übung, z. B. Bankdrücken"
              value="${esc(ex.name || "")}" oninput="exNameInput(${i}, this)">
       <p class="hint lasthint" id="last-${i}">${lastHintHtml(i, ex.name)}</p>
+      ${isBodyweightEx(ex.name) ? `<p class="hint" style="margin:-4px 0 0;color:var(--c-kcal)">± drücken: <b>−</b> = Hilfe der Maschine · <b>+</b> = Zusatzgewicht · <b>0</b> = frei</p>` : ""}
       <div style="display:flex;flex-direction:column;gap:6px">
         ${ex.sets.map((s, j) => {
           const l = last[j] || last[last.length - 1] || null;
@@ -1926,9 +1936,9 @@ function renderExList() {
           return `
           <div class="setrow">
             <span class="sn">Satz ${j + 1}</span>
-            <input class="in-reps" type="number" min="0" max="500" inputmode="numeric" placeholder="Wdh." value="${s.reps || ""}" oninput="setDelta(this)">
+            <input class="in-reps" type="number" min="0" max="500" inputmode="numeric" placeholder="Wdh." value="${s.reps === "" || s.reps == null ? "" : s.reps}" oninput="setDelta(this)">
             <span style="display:flex;gap:4px;min-width:0">
-              <input class="in-kg" type="number" step="0.5" min="-200" max="1000" inputmode="decimal" placeholder="kg" value="${s.kg || ""}" oninput="setDelta(this)" style="min-width:0">
+              <input class="in-kg" type="number" step="0.5" min="-200" max="1000" inputmode="decimal" placeholder="kg" value="${s.kg === "" || s.kg == null ? "" : s.kg}" oninput="setDelta(this)" style="min-width:0">
               <button type="button" class="negbtn" onclick="toggleNeg(this)" title="Minus = Unterstützung (z. B. Klimmzug-Maschine)">±</button>
             </span>
             <span class="sl" ${l ? `data-kg="${l.kg}" data-reps="${l.reps}" data-base="${base}" title="Letztes Training"` : ""}>${base}</span>
@@ -1999,6 +2009,18 @@ function lastTimeText(name) {
   }
   return "";
 }
+let editingWorkoutId = null;
+function editWorkout(id) {
+  const w = state.workouts.find(x => x.id === id);
+  if (!w) return;
+  document.getElementById("trainSheet").showModal();
+  editingWorkoutId = id;
+  twDraft = { type: w.type || "kraft", intensity: w.intensity || "moderat",
+    exercises: (w.exercises || []).map(e => ({ name: e.name, sets: e.sets.map(x => ({ reps: x.reps, kg: x.kg })) })) };
+  document.getElementById("twMin").value = w.min || 60;
+  renderTwType(); renderExList();
+  document.getElementById("trainSheet").querySelector("h3").textContent = "Einheit bearbeiten · " + fmtDate(w.date);
+}
 function saveWorkout() {
   syncDraft();
   const min = parseInt(document.getElementById("twMin").value, 10) || 0;
@@ -2009,7 +2031,13 @@ function saveWorkout() {
     alert("Bitte mindestens Dauer oder eine Übung eintragen.");
     return;
   }
-  state.workouts.push({ id: uid(), date: activeKey(), type: twDraft.type, intensity: twDraft.intensity, min, exercises });
+  if (editingWorkoutId) {
+    const w = state.workouts.find(x => x.id === editingWorkoutId);
+    if (w) { w.type = twDraft.type; w.intensity = twDraft.intensity; w.min = min; w.exercises = exercises; }
+    editingWorkoutId = null;
+  } else {
+    state.workouts.push({ id: uid(), date: activeKey(), type: twDraft.type, intensity: twDraft.intensity, min, exercises });
+  }
   save(); closeSheet("trainSheet"); renderHeute();
   if (!document.getElementById("tab-training").hidden) renderTraining();
 }
@@ -2017,6 +2045,14 @@ function delWorkout(id) {
   if (!confirm("Diese Trainings-Einheit löschen?")) return;
   state.workouts = state.workouts.filter(w => w.id !== id);
   save(); renderTraining(); renderHeute();
+}
+
+/* Übungen, bei denen negatives Gewicht = Unterstützung bedeutet */
+const BODYWEIGHT_EX = ["klimmzug", "klimmzüge", "dip", "dips", "beinheben", "hängend", "dead hang",
+  "liegestütze", "pull-up", "chin-up", "muscle-up", "plank"];
+function isBodyweightEx(name) {
+  const n = (name || "").toLowerCase();
+  return BODYWEIGHT_EX.some(k => n.includes(k));
 }
 
 /* ── Heute dran (aus Wochenrhythmus) + Start ── */
@@ -2064,11 +2100,12 @@ function exGain(name) {
   if (!sess.length) return null;
   const topSet = sx => sx.sets.reduce((b, x) => (x.kg > b.kg || (x.kg === b.kg && x.reps > b.reps)) ? x : b, sx.sets[0]);
   const f = topSet(sess[0]), l = topSet(sess[sess.length - 1]);
-  const bw = f.kg === 0 && l.kg === 0;   // Körpergewichtsübung → Wdh. vergleichen
-  const from = bw ? f.reps : f.kg, to = bw ? l.reps : l.kg;
-  const unit = bw ? " Wdh." : " kg";
+  /* Nur Wdh. vergleichen, wenn nirgends ein Gewicht steht (reines Körpergewicht) */
+  const noWeight = sess.every(sx => sx.sets.every(x => x.kg === 0));
+  const from = noWeight ? f.reps : f.kg, to = noWeight ? l.reps : l.kg;
+  const unit = noWeight ? " Wdh." : " kg";
   const diff = to - from;
-  return { from, to, unit, diff, sessions: sess.length, lastDate: sess[sess.length - 1].date, bw };
+  return { from, to, unit, diff, sessions: sess.length, lastDate: sess[sess.length - 1].date, noWeight };
 }
 function renderExProgress() {
   const names = (typeof allExerciseNames === "function") ? allExerciseNames() : [];
@@ -2131,6 +2168,7 @@ function renderTraining() {
         <span class="woico">${t.ico}</span>
         <div class="wotitle"><b>${t.label}</b>
           <span>${fmtDate(w.date, { weekday: "short", day: "2-digit", month: "2-digit" })}${w.min ? " · " + w.min + " min" : ""}${w.intensity ? " · " + (WORKOUT_INT[w.intensity] || "") : ""}</span></div>
+        <button class="del-x" aria-label="Einheit bearbeiten" onclick="editWorkout('${w.id}')" title="Bearbeiten">✎</button>
         <button class="del-x" aria-label="Einheit löschen" onclick="delWorkout('${w.id}')">×</button>
       </div>
       ${exHtml}</div>`;
@@ -2542,7 +2580,13 @@ function drawBars(boxId, data, opts) {
   g += `<line x1="${M.l}" x2="${W - M.r}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line)" stroke-width="1.5"/>`;
   const svg = mkSvg(W, H, g);
   box.appendChild(svg);
-  const tip = box.querySelector(".viz-tip");
+  let tip = box.querySelector(".viz-tip");
+  if (!tip) {
+    tip = document.createElement("div");
+    tip.className = "viz-tip";
+    box.style.position = box.style.position || "relative";
+    box.appendChild(tip);
+  }
   svg.addEventListener("pointermove", ev => {
     const r = svg.getBoundingClientRect();
     const px = (ev.clientX - r.left) * (W / r.width);
@@ -2869,7 +2913,7 @@ function renderProfil() {
 }
 
 /* ── App-Version & erzwungenes Update (gegen alten Cache) ── */
-const APP_VERSION = "v24";
+const APP_VERSION = "v25";
 async function forceUpdate() {
   try {
     if ("serviceWorker" in navigator) {
@@ -3247,20 +3291,58 @@ function openExInfo(name) {
         ? `<b style="color:var(--c-gebet)">${fmtNum(pr.best.kg, pr.best.kg % 1 ? 1 : 0)} kg × ${pr.best.reps}</b> (${fmtDate(pr.best.date)}) · ${pr.sessions} Einheiten · zuletzt ${fmtDate(pr.last.date)}`
         : "Noch keine Einträge — leg los! 💪"}</dd>
     </dl>
+    ${assistFixBlock(name)}
     <div id="infoChart" style="margin:6px 0 10px"></div>
     <div class="field"><label>📝 Deine Notizen (Sitzhöhe, Griff, Cues …)</label>
       <input value="${esc(note)}" onchange="saveExNote('${name.replace(/'/g,"\\'")}', this)"></div>`;
   /* Steigerungs-Chart: schwerster Satz je Einheit (falls ≥2 Einheiten) */
   const sess = exSessions(name);
-  if (sess.length >= 2) {
+  const chartBox = document.getElementById("infoChart");
+  if (chartBox && sess.length >= 2) {
+    /* Bei Körpergewichtsübungen die echte Last zeigen (KG + Zusatz/− Hilfe) */
+    const myKg = currentWeight() || 80;
+    const bwEx = isBodyweightEx(name);
+    const noWeight = sess.every(x => x.sets.every(st => st.kg === 0));
     const data = sess.slice(-20).map(x => ({ label: fmtDate(x.date),
-      val: Math.max(...x.sets.map(st => st.kg > 0 ? st.kg : st.reps)) }));
-    const bw = sess.every(x => x.sets.every(st => st.kg === 0));
-    document.getElementById("infoChart").innerHTML =
-      `<b style="font-size:13px;color:var(--c-train)">📈 Steigerung (${bw ? "Wdh." : "kg"})</b><div class="chartbox" id="infoChartBox"></div>`;
-    drawBars("infoChartBox", data, { color: "var(--c-train)", unit: bw ? "" : " kg", decimals: bw ? 0 : 1, labelEvery: Math.max(1, Math.ceil(data.length / 5)) });
-  }
+      val: noWeight ? Math.max(...x.sets.map(st => st.reps))
+         : bwEx ? Math.round(Math.max(...x.sets.map(st => myKg + st.kg)) * 10) / 10
+         : Math.max(...x.sets.map(st => st.kg)) }));
+    const unit = noWeight ? "" : " kg";
+    chartBox.innerHTML =
+      `<b style="font-size:13px;color:var(--c-train)">Steigerung${bwEx && !noWeight ? " (Last inkl. Körpergewicht)" : noWeight ? " (Wdh.)" : " (kg)"}</b><div class="chartbox" id="infoChartBox"></div>`;
+    drawBars("infoChartBox", data, { color: "var(--c-train)", unit, decimals: noWeight ? 0 : 1, labelEvery: Math.max(1, Math.ceil(data.length / 5)) });
+  } else if (chartBox) { chartBox.innerHTML = ""; }
   document.getElementById("infoSheet").showModal();
+}
+
+
+/* ── Korrektur: versehentlich positiv eingetragene Hilfe-Gewichte ── */
+function assistFixBlock(name) {
+  if (!isBodyweightEx(name)) return "";
+  const sess = exSessions(name);
+  const posSets = sess.reduce((a, sx) => a + sx.sets.filter(x => x.kg > 0).length, 0);
+  const hasZeroOrNeg = sess.some(sx => sx.sets.some(x => x.kg <= 0));
+  if (!posSets || !hasZeroOrNeg) return "";
+  return `<div style="background:var(--warn-bg,rgba(255,159,10,.14));border-radius:14px;padding:12px;margin:10px 0">
+    <b style="font-size:14px">Waren das Hilfe-Gewichte?</b>
+    <p class="hint" style="margin:4px 0 10px">Bei ${esc(name)} stehen <b>${posSets} Sätze mit positivem Gewicht</b> — bei
+    Maschinen-Unterstützung müssen die negativ sein (z. B. −14 kg), sonst zählt die App weniger Hilfe als Rückschritt.</p>
+    <button type="button" class="minibtn" onclick="flipAssist('${esc(name).replace(/'/g,"\\'")}')">↔ In Hilfe-Gewicht (−) umwandeln</button>
+  </div>`;
+}
+function flipAssist(name) {
+  const n = name.toLowerCase();
+  let count = 0;
+  state.workouts.forEach(w => (w.exercises || []).forEach(ex => {
+    if (ex.name.toLowerCase() !== n) return;
+    ex.sets.forEach(sx => { if (sx.kg > 0) { sx.kg = -sx.kg; count++; } });
+  }));
+  if (!count) return;
+  save();
+  alert(count + " Sätze umgestellt: aus " + name + "-Gewichten wurde Unterstützung (−).");
+  renderHeute();
+  if (!document.getElementById("tab-training").hidden) renderTraining();
+  openExInfo(name);
 }
 
 /* ── Ausführungs-Video pro Übung (eigener Link, eingebettet) ── */

@@ -264,6 +264,7 @@
   .exblock { border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
   .setrow { display: grid; grid-template-columns: 44px 1fr 1fr 64px; gap: 8px; align-items: center; }
   .setrow .sn { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .modeswitch button { font-size: 13px; padding: 7px 12px; min-height: 38px; }
   .negbtn {
     appearance: none; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2);
     cursor: pointer; font: inherit; font-weight: 800; font-size: 15px;
@@ -1846,7 +1847,9 @@ function applyPlan(id) {
   twDraft.exercises = p.exercises.map(e => {
     const name = planExName(e);
     const n = (typeof e === "object" && e.sets) ? e.sets : 3;
-    return { name, sets: lastSetsFor(name) || Array.from({ length: n }, () => ({ reps: "", kg: "" })) };
+    const ex = { name, sets: lastSetsFor(name) || Array.from({ length: n }, () => ({ reps: "", kg: "" })) };
+    ex.assist = detectAssist(ex);
+    return ex;
   });
   renderTwType();
   renderExList();
@@ -1897,16 +1900,31 @@ function syncDraft() {
     const ex = twDraft.exercises[i];
     if (!ex) return;
     ex.name = block.querySelector(".exname-in").value.trim();
-    ex.sets = Array.from(block.querySelectorAll(".setrow")).map(row => ({
-      reps: parseInt(row.querySelector(".in-reps").value, 10) || 0,
-      kg: parseFloat((row.querySelector(".in-kg").value || "").replace(",", ".")) || 0
-    }));
+    ex.sets = Array.from(block.querySelectorAll(".setrow")).map(row => {
+      const reps = parseInt(row.querySelector(".in-reps").value, 10) || 0;
+      let kg = parseFloat((row.querySelector(".in-kg").value || "").replace(",", ".")) || 0;
+      if (ex.assist) kg = -Math.abs(kg);   // Hilfe-Modus → immer negativ speichern
+      return { reps, kg };
+    });
   });
 }
 function addExercise() {
   syncDraft();
-  twDraft.exercises.push({ name: "", sets: [{ reps: "", kg: "" }, { reps: "", kg: "" }, { reps: "", kg: "" }] });
+  twDraft.exercises.push({ name: "", sets: [{ reps: "", kg: "" }, { reps: "", kg: "" }, { reps: "", kg: "" }], assist: false });
   renderExList();
+}
+/* Hilfe-Modus: eingegebene Zahl zählt als Unterstützung (negativ gespeichert) */
+function setAssistMode(i, on) {
+  syncDraft();
+  const ex = twDraft.exercises[i];
+  ex.assist = on;
+  ex.sets.forEach(st => { if (st.kg !== "" && st.kg != null) st.kg = on ? -Math.abs(st.kg) : Math.abs(st.kg); });
+  renderExList();
+}
+/* Modus aus vorhandenen Werten ableiten (negative Werte = Hilfe) */
+function detectAssist(ex) {
+  if (!isBodyweightEx(ex.name)) return false;
+  return ex.sets.some(st => Number(st.kg) < 0);
 }
 function delExercise(i) {
   syncDraft();
@@ -1928,7 +1946,11 @@ function renderExList() {
       <input class="exname-in" list="exNames" placeholder="Übung, z. B. Bankdrücken"
              value="${esc(ex.name || "")}" oninput="exNameInput(${i}, this)">
       <p class="hint lasthint" id="last-${i}">${lastHintHtml(i, ex.name)}</p>
-      ${isBodyweightEx(ex.name) ? `<p class="hint" style="margin:-4px 0 0;color:var(--c-kcal)">± drücken: <b>−</b> = Hilfe der Maschine · <b>+</b> = Zusatzgewicht · <b>0</b> = frei</p>` : ""}
+      ${isBodyweightEx(ex.name) ? `<div class="chips modeswitch" style="margin:2px 0 0">
+        <button type="button" class="${ex.assist ? "sel" : ""}" onclick="setAssistMode(${i}, true)">− Hilfe</button>
+        <button type="button" class="${ex.assist ? "" : "sel"}" onclick="setAssistMode(${i}, false)">+ Zusatz</button>
+        <span class="hint" style="margin:0;align-self:center">${ex.assist ? "Zahl = kg Unterstützung" : "Zahl = kg extra (0 = frei)"}</span>
+      </div>` : ""}
       <div style="display:flex;flex-direction:column;gap:6px">
         ${ex.sets.map((s, j) => {
           const l = last[j] || last[last.length - 1] || null;
@@ -1938,8 +1960,8 @@ function renderExList() {
             <span class="sn">Satz ${j + 1}</span>
             <input class="in-reps" type="number" min="0" max="500" inputmode="numeric" placeholder="Wdh." value="${s.reps === "" || s.reps == null ? "" : s.reps}" oninput="setDelta(this)">
             <span style="display:flex;gap:4px;min-width:0">
-              <input class="in-kg" type="number" step="0.5" min="-200" max="1000" inputmode="decimal" placeholder="kg" value="${s.kg === "" || s.kg == null ? "" : s.kg}" oninput="setDelta(this)" style="min-width:0">
-              <button type="button" class="negbtn" onclick="toggleNeg(this)" title="Minus = Unterstützung (z. B. Klimmzug-Maschine)">±</button>
+              <input class="in-kg" type="number" step="0.5" min="-200" max="1000" inputmode="decimal" placeholder="kg" value="${s.kg === "" || s.kg == null ? "" : (ex.assist ? Math.abs(s.kg) : s.kg)}" oninput="setDelta(this)" style="min-width:0">
+              ${isBodyweightEx(ex.name) ? "" : `<button type="button" class="negbtn" onclick="toggleNeg(this)" title="Minus = Unterstützung">±</button>`}
             </span>
             <span class="sl" ${l ? `data-kg="${l.kg}" data-reps="${l.reps}" data-base="${base}" title="Letztes Training"` : ""}>${base}</span>
           </div>`;
@@ -1981,6 +2003,8 @@ function setDelta(input) {
 }
 function exNameInput(i, input) {
   twDraft.exercises[i].name = input.value.trim();
+  const ex = twDraft.exercises[i];
+  if (isBodyweightEx(ex.name) && ex.assist == null) ex.assist = detectAssist(ex);
   document.getElementById("last-" + i).innerHTML = lastHintHtml(i, input.value.trim());
 }
 function lastHintHtml(i, name) {
@@ -1993,6 +2017,7 @@ function fillLast(i) {
   const sets = lastSetsFor(twDraft.exercises[i].name);
   if (!sets) return;
   twDraft.exercises[i].sets = sets;
+  twDraft.exercises[i].assist = detectAssist(twDraft.exercises[i]);
   renderExList();
 }
 function lastTimeText(name) {
@@ -2016,7 +2041,11 @@ function editWorkout(id) {
   document.getElementById("trainSheet").showModal();
   editingWorkoutId = id;
   twDraft = { type: w.type || "kraft", intensity: w.intensity || "moderat",
-    exercises: (w.exercises || []).map(e => ({ name: e.name, sets: e.sets.map(x => ({ reps: x.reps, kg: x.kg })) })) };
+    exercises: (w.exercises || []).map(e => {
+      const ex = { name: e.name, sets: e.sets.map(x => ({ reps: x.reps, kg: x.kg })) };
+      ex.assist = detectAssist(ex);
+      return ex;
+    }) };
   document.getElementById("twMin").value = w.min || 60;
   renderTwType(); renderExList();
   document.getElementById("trainSheet").querySelector("h3").textContent = "Einheit bearbeiten · " + fmtDate(w.date);
@@ -2913,7 +2942,7 @@ function renderProfil() {
 }
 
 /* ── App-Version & erzwungenes Update (gegen alten Cache) ── */
-const APP_VERSION = "v25";
+const APP_VERSION = "v26";
 async function forceUpdate() {
   try {
     if ("serviceWorker" in navigator) {
@@ -3293,6 +3322,7 @@ function openExInfo(name) {
     </dl>
     ${assistFixBlock(name)}
     <div id="infoChart" style="margin:6px 0 10px"></div>
+    <div id="infoHist"></div>
     <div class="field"><label>📝 Deine Notizen (Sitzhöhe, Griff, Cues …)</label>
       <input value="${esc(note)}" onchange="saveExNote('${name.replace(/'/g,"\\'")}', this)"></div>`;
   /* Steigerungs-Chart: schwerster Satz je Einheit (falls ≥2 Einheiten) */
@@ -3312,6 +3342,30 @@ function openExInfo(name) {
       `<b style="font-size:13px;color:var(--c-train)">Steigerung${bwEx && !noWeight ? " (Last inkl. Körpergewicht)" : noWeight ? " (Wdh.)" : " (kg)"}</b><div class="chartbox" id="infoChartBox"></div>`;
     drawBars("infoChartBox", data, { color: "var(--c-train)", unit, decimals: noWeight ? 0 : 1, labelEvery: Math.max(1, Math.ceil(data.length / 5)) });
   } else if (chartBox) { chartBox.innerHTML = ""; }
+
+  /* Historie: wann hast du was geschafft? */
+  const histBox = document.getElementById("infoHist");
+  if (histBox) {
+    if (!sess.length) {
+      histBox.innerHTML = "";
+    } else {
+      const prKg = pr && pr.best ? pr.best.kg : null;
+      const bwEx2 = isBodyweightEx(name);
+      const myKg2 = currentWeight() || 80;
+      histBox.innerHTML = `<b style="font-size:13px;color:var(--ink-2)">Verlauf · wann was geschafft</b>
+        <ul class="exhist">` + [...sess].reverse().map(x => {
+        const sets = x.sets.map(st => {
+          const isPr = prKg != null && st.kg === prKg && !bwEx2;
+          const val = st.kg === 0 ? "Körpergewicht"
+            : st.kg < 0 ? `−${fmtNum(Math.abs(st.kg), Math.abs(st.kg) % 1 ? 1 : 0)} kg Hilfe`
+            : `${fmtNum(st.kg, st.kg % 1 ? 1 : 0)} kg`;
+          return `<span class="s">${val} × ${st.reps}</span>${isPr ? ' <span class="pr">PR</span>' : ""}`;
+        }).join(" · ");
+        const real = bwEx2 ? ` <span style="color:var(--muted)">(Last ${fmtNum(Math.max(...x.sets.map(st => myKg2 + st.kg)), 1)} kg)</span>` : "";
+        return `<li><span class="d">${fmtDate(x.date, { weekday: "short", day: "2-digit", month: "2-digit", year: "2-digit" })}</span><br>${sets}${real}</li>`;
+      }).join("") + `</ul>`;
+    }
+  }
   document.getElementById("infoSheet").showModal();
 }
 

@@ -38,6 +38,7 @@
     --c-gebet: #ffd60a;  --w-gebet: rgba(255, 214, 10, 0.13);
     --c-supp: #ff375f;   --w-supp: rgba(255, 55, 95, 0.14);
     --c-kcal: #ff9f0a;   --w-kcal: rgba(255, 159, 10, 0.14);
+    --brand: #c8ff00;    /* Signature-Akzent */
     --grad-hero: linear-gradient(135deg, #34e07a, #64d2ff);
     --grad-brand: linear-gradient(135deg, #34e07a, #0fb56f);
     --nav-h: 66px;
@@ -57,8 +58,8 @@
   .wrap { max-width: 560px; margin: 0 auto; padding: 14px 14px 24px; }
 
   header.top { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 4px 14px; }
-  .wordmark { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin: 0; }
-  .wordmark .dot { color: var(--accent); }
+  .wordmark { font-size: 24px; font-weight: 900; letter-spacing: -0.04em; margin: 0; text-transform: uppercase; }
+  .wordmark .dot { color: var(--brand); }
   .streak {
     font-size: 13px; font-weight: 750; color: var(--streak-ink);
     background: var(--streak-bg); border-radius: 999px; padding: 5px 11px; white-space: nowrap;
@@ -67,9 +68,9 @@
 
   .card {
     background: var(--surface); border: 1px solid var(--hairline);
-    border-radius: 20px; padding: 18px; margin-bottom: 12px;
+    border-radius: 22px; padding: 18px; margin-bottom: 12px;
   }
-  .card h2 { margin: 0 0 12px; font-size: 18px; font-weight: 750; letter-spacing: -0.01em; }
+  .card h2 { margin: 0 0 12px; font-size: 19px; font-weight: 850; letter-spacing: -0.02em; }
   .hint { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
 
   /* ── Tag-Umschalter ── */
@@ -82,33 +83,65 @@
   #dayLabel { min-width: 168px; text-align: center; font-weight: 750; font-size: 16px; }
   .dayswitch.past #dayLabel { color: var(--c-gebet); }
 
-  /* ── Hero: Tag-Zähler + Tages-Ring ── */
-  .hero { display: flex; align-items: center; gap: 16px; padding: 20px 18px;
-    background: radial-gradient(120% 160% at 0% 0%, rgba(52, 224, 122, 0.13), transparent 55%),
-                radial-gradient(120% 160% at 100% 100%, rgba(100, 210, 255, 0.12), transparent 55%), var(--surface); }
-  .hero-left { flex: 1; min-width: 0; }
-  .hero-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
-  .hero-day {
-    font-size: 44px; font-weight: 850; letter-spacing: -0.03em; line-height: 1.05; margin: 2px 0;
-    background: var(--grad-hero); -webkit-background-clip: text; background-clip: text; color: transparent;
-    font-variant-numeric: tabular-nums;
+  /* ── HERO: Foto, Ziel, Coach ── */
+  .hero2 {
+    position: relative; border-radius: 26px; overflow: hidden;
+    margin-bottom: 12px; min-height: 250px; display: flex; align-items: flex-end;
+    background: #0b0b0d; isolation: isolate;
   }
-  .hero-sub { font-size: 13.5px; color: var(--ink-2); }
-  .doneRing { position: relative; width: 108px; height: 108px; flex: none; }
-  .doneRing svg { transform: rotate(-90deg); width: 100%; height: 100%; }
-  .doneRing .track { stroke: var(--surface-2); }
-  .doneRing .fill { stroke: url(#dGrad); transition: stroke-dashoffset .5s ease; }
-  @media (prefers-reduced-motion: reduce) { .doneRing .fill { transition: none; } }
-  .doneRing .center {
-    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  .hero2-bg {
+    position: absolute; inset: 0; z-index: 0;
+    background-size: cover; background-position: center 25%;
+    opacity: 0; transition: opacity .6s ease;
   }
-  .doneRing .center b { font-size: 23px; font-weight: 800; font-variant-numeric: tabular-nums; }
-  .doneRing .center span { font-size: 10.5px; color: var(--muted); }
+  .hero2-bg.on { opacity: 0.55; }
+  .hero2::after {
+    content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: linear-gradient(175deg, rgba(0,0,0,.15) 0%, rgba(0,0,0,.72) 55%, #000 100%);
+  }
+  .hero2:not(:has(.hero2-bg.on)) {
+    background:
+      radial-gradient(90% 70% at 10% 0%, rgba(200,255,0,.16), transparent 60%),
+      radial-gradient(80% 70% at 100% 100%, rgba(100,210,255,.13), transparent 60%), #0b0b0d;
+  }
+  .hero2-in { position: relative; z-index: 2; padding: 20px; width: 100%; }
+  .hero2-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .hero2-tag {
+    font-size: 12px; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--brand); background: rgba(200,255,0,.14); padding: 5px 11px; border-radius: 999px;
+  }
+  .hero2-ring {
+    font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums;
+    color: #fff; background: rgba(255,255,255,.14); padding: 5px 12px; border-radius: 999px;
+    backdrop-filter: blur(6px);
+  }
+  .hero2-num {
+    font-size: clamp(58px, 20vw, 82px); font-weight: 900; letter-spacing: -0.05em;
+    line-height: .92; color: #fff; font-variant-numeric: tabular-nums;
+    animation: heroIn .5s cubic-bezier(.16,1,.3,1) both;
+  }
+  .hero2-num small { font-size: .34em; font-weight: 800; letter-spacing: -0.02em; margin-left: 6px; color: rgba(255,255,255,.72); }
+  .hero2-lbl {
+    font-size: 14px; font-weight: 750; color: rgba(255,255,255,.8); margin-top: 4px;
+    animation: heroIn .5s .06s cubic-bezier(.16,1,.3,1) both;
+  }
+  .hero2-bar { height: 7px; border-radius: 4px; background: rgba(255,255,255,.16); overflow: hidden; margin: 14px 0 12px; }
+  .hero2-bar i { display: block; height: 100%; border-radius: 4px; background: var(--brand); transition: width .7s cubic-bezier(.16,1,.3,1); }
+  .hero2-coach {
+    margin: 0; font-size: 15.5px; font-weight: 650; line-height: 1.4; color: #fff;
+    animation: heroIn .5s .12s cubic-bezier(.16,1,.3,1) both;
+  }
+  .hero2-coach b { color: var(--brand); font-weight: 900; }
+  @keyframes heroIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .hero2-num, .hero2-lbl, .hero2-coach { animation: none; }
+    .hero2-bar i, .hero2-bg { transition: none; }
+  }
 
-  /* ── Fortschritts-Balken ── */
+  /* ── Fortschritts-Balken ── */  /* ── Fortschritts-Balken ── */
   .pbar .pbar-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-  .pbar .pbar-lbl { font-size: 14px; font-weight: 700; }
-  .pbar .pbar-val { font-size: 20px; font-weight: 850; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+  .pbar .pbar-lbl { font-size: 12px; font-weight: 850; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+  .pbar .pbar-val { font-size: 24px; font-weight: 900; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
   .pbar .pbar-track { height: 12px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
   .pbar .pbar-fill { height: 100%; border-radius: 6px; transition: width .5s ease; }
   @media (prefers-reduced-motion: reduce) { .pbar .pbar-fill { transition: none; } }
@@ -119,22 +152,31 @@
   .tile {
     appearance: none; border: 1px solid var(--hairline); cursor: pointer; text-align: left;
     font: inherit; color: var(--ink); background: var(--surface); user-select: none;
-    border-radius: 20px; padding: 14px; min-height: 118px;
-    display: flex; flex-direction: column; gap: 4px; position: relative;
+    border-radius: 22px; padding: 15px; min-height: 126px;
+    display: flex; flex-direction: column; gap: 2px; position: relative; overflow: hidden;
+    transition: transform .22s cubic-bezier(.16,1,.3,1), background .25s ease, border-color .25s ease;
   }
-  .tile:active { transform: scale(0.97); }
-  @media (prefers-reduced-motion: reduce) { .tile:active { transform: none; } }
-  .tile .t-ico { font-size: 26px; line-height: 1; }
-  .tile .t-name { font-size: 14px; font-weight: 700; color: var(--ink-2); margin-top: 2px; }
-  .tile .t-val { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
-  .tile .t-sub { font-size: 11.5px; color: var(--muted); }
+  .tile:active { transform: scale(0.94); }
+  @media (prefers-reduced-motion: reduce) { .tile { transition: none; } .tile:active { transform: none; } }
+  .tile .t-ico { font-size: 27px; line-height: 1; }
+  .tile .t-name {
+    font-size: 11.5px; font-weight: 850; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); margin-top: 6px;
+  }
+  .tile .t-val {
+    font-size: 27px; font-weight: 900; letter-spacing: -0.03em; line-height: 1.1;
+    font-variant-numeric: tabular-nums; margin-top: 1px;
+  }
+  .tile .t-sub { font-size: 11.5px; color: var(--muted); font-weight: 600; }
   .tile .t-check {
-    position: absolute; top: 12px; right: 12px; width: 26px; height: 26px; border-radius: 50%;
+    position: absolute; top: 13px; right: 13px; width: 27px; height: 27px; border-radius: 50%;
     border: 2px solid var(--line); display: flex; align-items: center; justify-content: center;
-    font-size: 14px; font-weight: 800; color: #000;
+    font-size: 15px; font-weight: 900; color: #000;
+    transition: background .25s ease, border-color .25s ease;
   }
   .tile.done { border-color: transparent; }
   .tile.done .t-check { border-color: transparent; }
+  .tile.done .t-name { color: rgba(255,255,255,.62); }
   .tile .t-minus {
     position: absolute; right: 12px; bottom: 12px; width: 34px; height: 34px; border-radius: 10px;
     appearance: none; border: none; cursor: pointer; background: var(--surface-2); color: var(--ink-2);
@@ -149,7 +191,7 @@
     width: 27px; height: 27px; border-radius: 9px; border: 2px solid var(--line); flex: none;
     display: flex; align-items: center; justify-content: center; color: #000; font-size: 15px; font-weight: 800;
   }
-  li.x-done .x-check { background: var(--accent); border-color: var(--accent); }
+  li.x-done .x-check { background: var(--brand); border-color: var(--brand); }
   .x-name { flex: 1; min-width: 0; font-weight: 550; }
   li.x-done .x-name { color: var(--ink-2); }
   .x-row-btn { flex: 1; display: flex; align-items: center; gap: 12px; min-width: 0; appearance: none; background: none; border: none; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
@@ -170,11 +212,13 @@
   }
   input[type="number"] { font-variant-numeric: tabular-nums; }
   button.btn {
-    appearance: none; font: inherit; font-weight: 700; cursor: pointer;
-    background: var(--grad-brand); color: #04210f; border: none;
-    border-radius: 12px; padding: 10px 18px; min-height: 48px;
+    appearance: none; font: inherit; font-weight: 850; font-size: 16px; cursor: pointer;
+    background: var(--brand); color: #0d1400; border: none; letter-spacing: -0.01em;
+    border-radius: 14px; padding: 12px 18px; min-height: 52px;
+    transition: transform .2s cubic-bezier(.16,1,.3,1), filter .2s ease;
   }
-  button.btn:active { filter: brightness(0.92); }
+  button.btn:active { transform: scale(0.96); filter: brightness(0.9); }
+  @media (prefers-reduced-motion: reduce) { button.btn { transition: none; } button.btn:active { transform: none; } }
   button.btn.ghost { background: var(--surface-2); color: var(--ink); }
   button.btn.danger { background: var(--over-wash); color: var(--over); }
   button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible {
@@ -187,7 +231,7 @@
     background: var(--surface-2); border: 1px solid var(--line); color: var(--ink);
     border-radius: 999px; padding: 10px 15px; min-height: 44px;
   }
-  .chips button.sel { background: var(--accent); border-color: var(--accent); color: #04210f; }
+  .chips button.sel { background: var(--brand); border-color: var(--brand); color: #0d1400; font-weight: 850; }
   .minibtn {
     appearance: none; font: inherit; font-size: 13.5px; font-weight: 650; cursor: pointer;
     background: var(--accent-wash); color: var(--accent-deep); border: none;
@@ -403,7 +447,7 @@
     justify-content: center; gap: 3px;
   }
   nav.bottom button svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-  nav.bottom button.active { color: var(--accent); }
+  nav.bottom button.active { color: var(--brand); }
 
   /* ── Konfetti 🎉 ── */
   #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 99; overflow: hidden; }
@@ -433,31 +477,23 @@
       <button type="button" id="dayFwd" onclick="shiftDay(1)" aria-label="Nächster Tag" disabled>›</button>
     </div>
 
-    <div class="card hero">
-      <div class="hero-left">
-        <div class="hero-eyebrow" id="heroEyebrow">Deine Transformation</div>
-        <div class="hero-day" id="heroDay">–</div>
-        <div class="hero-sub" id="heroSub"></div>
+    <section class="hero2" id="hero2">
+      <div class="hero2-bg" id="hero2Bg"></div>
+      <div class="hero2-in">
+        <div class="hero2-row">
+          <span class="hero2-tag" id="h2Day">TAG –</span>
+          <span class="hero2-ring" id="h2Ring">0/8</span>
+        </div>
+        <div class="hero2-num" id="h2Num">–</div>
+        <div class="hero2-lbl" id="h2Lbl">Los geht's</div>
+        <div class="hero2-bar"><i id="h2Fill" style="width:0%"></i></div>
+        <p class="hero2-coach" id="h2Coach"></p>
       </div>
-      <div class="doneRing">
-        <svg viewBox="0 0 108 108">
-          <defs>
-            <linearGradient id="dGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#34e07a"/>
-              <stop offset="100%" stop-color="#64d2ff"/>
-            </linearGradient>
-          </defs>
-          <circle class="track" cx="54" cy="54" r="46" fill="none" stroke-width="11"/>
-          <circle class="fill" id="doneFill" cx="54" cy="54" r="46" fill="none" stroke-width="11"
-                  stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="289"/>
-        </svg>
-        <div class="center"><b id="doneCount">0/6</b><span>erledigt</span></div>
-      </div>
+    </section>
     </div>
 
     <div class="card" id="progressCard" hidden>
-      <div class="pbar" id="pbarWeight"></div>
-      <div class="pbar" id="pbarStrength" style="margin-top:14px"></div>
+      <div class="pbar" id="pbarStrength"></div>
     </div>
 
     <div class="card" id="kcalCard" hidden>
@@ -1250,11 +1286,83 @@ function renderProgress() {
     html2 = `<div class="pbar-top"><span class="pbar-lbl">💪 Kraft gesteigert</span><span class="pbar-val" style="color:var(--muted)">–</span></div>
       <div class="pbar-track"></div><div class="pbar-sub">Ab der 2. Trainingseinheit einer Übung sichtbar.</div>`;
   }
-  card.hidden = (w == null && strength == null);
-  document.getElementById("pbarWeight").innerHTML = html1;
+  card.hidden = (strength == null && !state.workouts.length);
   document.getElementById("pbarStrength").innerHTML = html2;
 }
 
+
+
+/* ══════════════ HERO: Ziel, Foto, Coach-Ansprache ══════════════ */
+let heroPhotoLoaded = false;
+function renderHero2(key, done) {
+  const dn = dayNumber(key);
+  const w = currentWeight(), sw = startWeight(), goal = state.profile ? state.profile.goal : null;
+  const total = TRACKERS.length;
+
+  document.getElementById("h2Day").textContent = dn >= 1 ? "TAG " + dn : "START IN " + (1 - dn);
+  document.getElementById("h2Ring").textContent = done + "/" + total;
+
+  /* Große Zahl: noch X kg bis zum Ziel — sonst abgenommene kg — sonst Tag */
+  const numEl = document.getElementById("h2Num"), lblEl = document.getElementById("h2Lbl");
+  let pct = 0;
+  if (goal != null && w != null) {
+    const rest = w - goal;
+    if (rest > 0) {
+      numEl.innerHTML = fmtNum(rest, 1) + "<small>kg</small>";
+      lblEl.textContent = "bis zu deinem Ziel · " + fmtNum(goal, 1) + " kg";
+      if (sw != null && sw > goal) pct = Math.max(0, Math.min(100, (sw - w) / (sw - goal) * 100));
+    } else {
+      numEl.innerHTML = "ZIEL<small>erreicht 🎉</small>";
+      lblEl.textContent = fmtNum(w, 1) + " kg — jetzt halten.";
+      pct = 100;
+    }
+  } else if (w != null && sw != null) {
+    numEl.innerHTML = fmtNum(Math.abs(sw - w), 1) + "<small>kg</small>";
+    lblEl.textContent = (sw - w >= 0 ? "abgenommen" : "zugenommen") + " seit Start";
+  } else {
+    numEl.innerHTML = done + "<small>/" + total + "</small>";
+    lblEl.textContent = "erledigt heute — wiege dich für dein Ziel";
+    pct = done / total * 100;
+  }
+  document.getElementById("h2Fill").style.width = pct.toFixed(0) + "%";
+  document.getElementById("h2Coach").innerHTML = coachLine(key, done, total, w, sw, goal, dn);
+
+  /* Neuestes Fortschritts-Foto als Hintergrund (einmalig laden) */
+  if (!heroPhotoLoaded) {
+    heroPhotoLoaded = true;
+    fotoAll().then(list => {
+      if (!list.length) return;
+      const bg = document.getElementById("hero2Bg");
+      bg.style.backgroundImage = `url("${list[list.length - 1].img}")`;
+      bg.classList.add("on");
+    }).catch(() => {});
+  }
+}
+
+/* Coach: spricht dich an — abhängig von Tageszeit, Fortschritt und Plan */
+function coachLine(key, done, total, w, sw, goal, dn) {
+  const isToday = key === todayKey();
+  if (!isToday) return "Du trägst <b>" + fmtDate(key) + "</b> nach. Ehrlich bleiben zahlt sich aus.";
+  if (dn < 1) return "Noch <b>" + (1 - dn) + " Tage</b> bis zum Start — bau die Routine jetzt schon auf.";
+
+  const h = new Date().getHours();
+  const streak = computeStreak();
+  const idx = (new Date().getDay() + 6) % 7;
+  const plan = (state.weekplan && state.weekplan[idx]) ? state.weekplan[idx][1].replace(/^[^ ]+ /, "") : null;
+  const trainedToday = workoutsOn(key).length > 0;
+  const lost = (w != null && sw != null) ? sw - w : null;
+
+  if (done === total) return "Perfekter Tag — <b>alles erledigt</b>. Genau so entsteht der Unterschied. 🔥";
+  if (done === 0 && h < 11) return plan ? "Guten Morgen. Heute steht <b>" + plan + "</b> an — leg vor." : "Guten Morgen. <b>Noch nichts eingetragen</b> — starte den Tag richtig.";
+  if (done === 0 && h >= 20) return "Es ist spät und noch <b>0/" + total + "</b>. Wiegen, Wasser, Gebete — hol dir wenigstens die einfachen Punkte.";
+  if (done === 0) return plan ? "Heute: <b>" + plan + "</b>. Noch nichts eingetragen — fang an." : "Noch nichts eingetragen heute. <b>Fang an.</b>";
+  if (!trainedToday && plan && !/Ruhe|Frei/i.test(plan) && h >= 17) return "<b>" + plan + "</b> steht noch aus. Zieh's durch, dann ist der Tag deiner.";
+  if (streak >= 7) return "<b>" + streak + " Tage in Folge.</b> Das ist kein Zufall mehr — das bist du. 🔥";
+  if (streak >= 3) return "<b>" + streak + " Tage Streak</b> · " + done + "/" + total + " heute. Nicht abreißen lassen.";
+  if (lost != null && lost >= 1) return "Schon <b>" + fmtNum(lost, 1) + " kg</b> runter. " + done + "/" + total + " heute — weiter.";
+  if (done >= total - 2) return "Fast alles erledigt — <b>" + (total - done) + " fehlt noch.</b> Mach's voll.";
+  return "<b>" + done + "/" + total + "</b> heute. Jeder Eintrag zählt.";
+}
 
 /* ══════════════ Kalorien + echter Verbrauch (TDEE) ══════════════ */
 function openKcal() {
@@ -1429,17 +1537,6 @@ function renderHeute() {
   document.getElementById("daySwitch").classList.toggle("past", !isToday);
   document.getElementById("dayFwd").disabled = isToday;
 
-  /* Hero: Countdown oder Tag-Zähler */
-  const dn = dayNumber(key);
-  if (dn < 1) {
-    document.getElementById("heroEyebrow").textContent = "Start am 19.07. 🚀";
-    document.getElementById("heroDay").textContent = "Noch " + (1 - dn) + (1 - dn === 1 ? " Tag" : " Tage");
-    document.getElementById("heroSub").textContent = "Warm-up zählt schon — bau deine Routine auf!";
-  } else {
-    document.getElementById("heroEyebrow").textContent = "Deine Transformation";
-    document.getElementById("heroDay").textContent = "Tag " + dn;
-    document.getElementById("heroSub").textContent = "seit 19.07." + (state.profile ? " · Ziel " + fmtNum(state.profile.goal, 1) + " kg" : "");
-  }
 
   /* Kacheln */
   let done = 0;
@@ -1460,10 +1557,8 @@ function renderHeute() {
       ${minus}</div>`;
   }).join("");
 
-  /* Ring + Konfetti bei perfektem Tag */
-  const C = 289;
-  document.getElementById("doneFill").setAttribute("stroke-dashoffset", (C * (1 - done / TRACKERS.length)).toFixed(1));
-  document.getElementById("doneCount").textContent = done + "/" + TRACKERS.length;
+  /* Hero + Konfetti bei perfektem Tag */
+  renderHero2(key, done);
   if (done === TRACKERS.length && !state.perfect[key]) {
     state.perfect[key] = true;
     save();

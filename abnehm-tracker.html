@@ -37,6 +37,7 @@
     --c-steps: #64d2ff;  --w-steps: rgba(100, 210, 255, 0.14);
     --c-gebet: #ffd60a;  --w-gebet: rgba(255, 214, 10, 0.13);
     --c-supp: #ff375f;   --w-supp: rgba(255, 55, 95, 0.14);
+    --c-kcal: #ff9f0a;   --w-kcal: rgba(255, 159, 10, 0.14);
     --grad-hero: linear-gradient(135deg, #34e07a, #64d2ff);
     --grad-brand: linear-gradient(135deg, #34e07a, #0fb56f);
     --nav-h: 66px;
@@ -459,6 +460,10 @@
       <div class="pbar" id="pbarStrength" style="margin-top:14px"></div>
     </div>
 
+    <div class="card" id="kcalCard" hidden>
+      <div class="pbar" id="kcalCardBody"></div>
+    </div>
+
     <div class="tilegrid" id="tileGrid"></div>
 
     <div class="card" id="extrasCard" hidden>
@@ -573,6 +578,10 @@
     <details class="acc" ontoggle="if(this.open && window.renderVerlaufCharts) setTimeout(renderVerlaufCharts, 40)">
       <summary>👟 Schritte</summary>
       <div class="chartbox" id="stepsChart"><div class="viz-tip"></div></div>
+    </details>
+    <details class="acc" ontoggle="if(this.open && window.renderVerlaufCharts) setTimeout(renderVerlaufCharts, 40)">
+      <summary>🍽️ Kalorien</summary>
+      <div class="chartbox" id="kcalChart"><div class="viz-tip"></div></div>
     </details>
     <details class="acc" ontoggle="if(this.open && window.renderVerlaufCharts) setTimeout(renderVerlaufCharts, 40)">
       <summary>💧 Wasser</summary>
@@ -747,6 +756,28 @@
   </div>
 </dialog>
 
+<!-- ════════ SHEET: Kalorien ════════ -->
+<dialog class="sheet" id="kcalSheet">
+  <div class="sheet-inner">
+    <div class="sheet-grip"></div>
+    <h3>🍽️ Kalorien</h3>
+    <div style="text-align:center;margin-bottom:14px">
+      <div style="font-size:40px;font-weight:850;color:var(--c-kcal);font-variant-numeric:tabular-nums" id="kcalTotal">0</div>
+      <div class="hint" style="margin:0" id="kcalDayLbl">kcal heute</div>
+    </div>
+    <form onsubmit="addKcal(event)" style="display:flex;flex-direction:column;gap:10px">
+      <div class="field"><label for="kcalInput">Mahlzeit hinzufügen (kcal)</label>
+        <input id="kcalInput" type="number" step="1" min="0" max="20000" inputmode="numeric" placeholder="z. B. 650"></div>
+      <button class="btn" type="submit">＋ Dazurechnen</button>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="btn ghost" style="flex:1" onclick="setKcalTotal()">Tagessumme setzen</button>
+        <button type="button" class="btn danger" style="flex:1" onclick="clearKcal()">Zurücksetzen</button>
+      </div>
+      <button class="btn ghost" type="button" onclick="closeSheet('kcalSheet')">Fertig</button>
+    </form>
+  </div>
+</dialog>
+
 <!-- ════════ SHEET: Gebete ════════ -->
 <dialog class="sheet" id="prayerSheet">
   <div class="sheet-inner">
@@ -875,6 +906,7 @@ const DEFAULT_STATE = {
   sleep: {},            // {date: stunden}
   steps: {},            // {date: anzahl}
   water: {},            // {date: liter}
+  kcal: {},             // {date: kalorien}
   gebete: {},           // {date: 0..5}
   supps: {},            // {date: true}
   extras: [],           // [{id, name}] eigene Tagesziele
@@ -929,6 +961,7 @@ function load() {
       if (!s.measures || typeof s.measures !== "object" || Array.isArray(s.measures)) s.measures = {};
       if (!Array.isArray(s.suppsList)) s.suppsList = [];
       if (!s.water || typeof s.water !== "object" || Array.isArray(s.water)) s.water = {};
+      if (!s.kcal || typeof s.kcal !== "object" || Array.isArray(s.kcal)) s.kcal = {};
       /* Migration aus der alten Checklisten-Version */
       if (old.checks && typeof old.checks === "object" && !old._migrated6) {
         const stepsItem = (old.checkItems || []).find(i => i.type === "steps");
@@ -1006,6 +1039,7 @@ function workoutsOn(key) { return state.workouts.filter(w => w.date === key); }
 const TRACKERS = [
   { id: "training", name: "Training", ico: "🏋️", color: "var(--c-train)", wash: "var(--w-train)" },
   { id: "weight",   name: "Gewicht",  ico: "⚖️", color: "var(--c-weight)", wash: "var(--w-weight)" },
+  { id: "kcal",     name: "Kalorien", ico: "🍽️", color: "var(--c-kcal)", wash: "var(--w-kcal)" },
   { id: "sleep",    name: "Schlaf",   ico: "😴", color: "var(--c-sleep)", wash: "var(--w-sleep)" },
   { id: "steps",    name: "Schritte", ico: "👟", color: "var(--c-steps)", wash: "var(--w-steps)" },
   { id: "water",    name: "Wasser",   ico: "💧", color: "var(--c-steps)", wash: "var(--w-steps)" },
@@ -1033,6 +1067,10 @@ function trackerState(id, key) {
     }
     case "steps": { const n = state.steps[key]; return { done: n > 0, val: n ? fmtNum(n) : "–", sub: n >= 10000 ? "Ziel erreicht 🎯" : "Ziel 10.000" }; }
     case "gebete": { const n = gebeteCount(key); return { done: n >= 5, val: n + "/5", sub: n >= 5 ? "alle gebetet ✨" : "antippen" }; }
+    case "kcal": {
+      const c = state.kcal[key];
+      return { done: c > 0, val: c > 0 ? fmtNum(c) : "–", sub: c > 0 ? "kcal gegessen" : "antippen" };
+    }
     case "water": { const l = state.water[key] || 0; return { done: l >= WATER_GOAL, val: fmtNum(l, 2) + " L", sub: l >= WATER_GOAL ? "Ziel erreicht 💧" : "Ziel " + fmtNum(WATER_GOAL, 1) + " L" }; }
     case "supps": {
       if (state.suppsList.length) {
@@ -1048,6 +1086,7 @@ function tileTap(id) {
   if (id === "training") { openSheet("trainSheet"); return; }
   if (id === "gebete") { openPrayers(); return; }
   if (id === "water") { waterTap(); return; }
+  if (id === "kcal") { openKcal(); return; }
   if (id === "weight") { openBody(); return; }
   if (id === "supps") {
     if (state.suppsList.length) { openSupps(); return; }
@@ -1216,6 +1255,83 @@ function renderProgress() {
   document.getElementById("pbarStrength").innerHTML = html2;
 }
 
+
+/* ══════════════ Kalorien + echter Verbrauch (TDEE) ══════════════ */
+function openKcal() {
+  document.getElementById("kcalInput").value = "";
+  renderKcalSheet();
+  document.getElementById("kcalSheet").showModal();
+}
+function renderKcalSheet() {
+  const key = activeKey();
+  document.getElementById("kcalTotal").textContent = fmtNum(state.kcal[key] || 0);
+  document.getElementById("kcalDayLbl").textContent =
+    "kcal " + (key === todayKey() ? "heute" : "am " + fmtDate(key));
+}
+function addKcal(ev) {
+  ev.preventDefault();
+  const inp = document.getElementById("kcalInput");
+  const v = parseInt((inp.value || "").replace(",", "."), 10);
+  if (!isFinite(v) || v <= 0) return;
+  const key = activeKey();
+  state.kcal[key] = (state.kcal[key] || 0) + v;
+  save(); inp.value = ""; renderKcalSheet(); renderHeute();
+}
+function setKcalTotal() {
+  const inp = document.getElementById("kcalInput");
+  const v = parseInt((inp.value || "").replace(",", "."), 10);
+  if (!isFinite(v) || v < 0) { alert("Trag zuerst die Tagessumme ins Feld ein."); return; }
+  const key = activeKey();
+  if (v > 0) state.kcal[key] = v; else delete state.kcal[key];
+  save(); inp.value = ""; renderKcalSheet(); renderHeute();
+}
+function clearKcal() {
+  delete state.kcal[activeKey()];
+  save(); renderKcalSheet(); renderHeute();
+}
+
+/* Echter Verbrauch aus deinen Daten:
+   Verbrauch = Ø Zufuhr − (Gewichtsänderung × 7700 kcal/kg) / Tage
+   ≈ 7700 kcal pro kg Körpergewicht (Näherung; Hall 2011 zeigt: über Monate
+   ungenau, für eine 1–2-Wochen-Messung aber der Standardansatz). */
+function tdeeEstimate() {
+  const days = lastNDays(21).filter(k => state.kcal[k] > 0);
+  if (days.length < 4) return { days: days.length, ready: false };
+  const first = days[0], last = days[days.length - 1];
+  const wIn = state.weights.filter(w => w.date >= first && w.date <= last);
+  const avgIn = days.reduce((a, k) => a + state.kcal[k], 0) / days.length;
+  if (wIn.length < 2) return { days: days.length, ready: false, avgIn, noWeight: true };
+  const deltaKg = wIn[wIn.length - 1].kg - wIn[0].kg;
+  const spanDays = Math.max(1, Math.round((new Date(wIn[wIn.length - 1].date) - new Date(wIn[0].date)) / 86400000));
+  const tdee = avgIn - (deltaKg * 7700 / spanDays);
+  return { days: days.length, ready: days.length >= 7 && spanDays >= 5, avgIn, deltaKg, spanDays, tdee: Math.round(tdee) };
+}
+function renderKcalCard() {
+  const card = document.getElementById("kcalCard");
+  const t = tdeeEstimate();
+  if (!t.days) { card.hidden = true; return; }
+  card.hidden = false;
+  const pct = Math.min(100, t.days / 7 * 100);
+  let body;
+  if (t.ready) {
+    const p = state.profile;
+    const abnehmZiel = Math.round(t.tdee - 500);
+    body = `<div class="pbar-top"><span class="pbar-lbl">🔥 Dein echter Verbrauch</span>
+        <span class="pbar-val" style="color:var(--c-kcal)">${fmtNum(t.tdee)} kcal</span></div>
+      <div class="pbar-sub">Ø gegessen ${fmtNum(Math.round(t.avgIn))} kcal · Gewicht ${t.deltaKg <= 0 ? "−" : "+"}${fmtNum(Math.abs(t.deltaKg), 1)} kg in ${t.spanDays} Tagen<br>
+      Zum Abnehmen (~0,5 kg/Woche): <b style="color:var(--c-weight)">${fmtNum(abnehmZiel)} kcal/Tag</b></div>`;
+  } else {
+    const rest = Math.max(0, 7 - t.days);
+    body = `<div class="pbar-top"><span class="pbar-lbl">🔥 Verbrauch messen</span>
+        <span class="pbar-val" style="color:var(--c-kcal)">${t.days}/7</span></div>
+      <div class="pbar-track"><div class="pbar-fill" style="width:${pct}%;background:var(--c-kcal)"></div></div>
+      <div class="pbar-sub">${t.avgIn ? "Ø bisher " + fmtNum(Math.round(t.avgIn)) + " kcal · " : ""}${
+        rest ? "noch " + rest + " Tag" + (rest > 1 ? "e" : "") + " tracken" : "täglich wiegen nicht vergessen"} —
+        dann rechnet die App deinen echten Verbrauch aus.${t.noWeight ? " <b>Wiege dich regelmäßig!</b>" : ""}</div>`;
+  }
+  document.getElementById("kcalCardBody").innerHTML = body;
+}
+
 /* ══════════════ Körper: Gewicht + Maße ══════════════ */
 const MEASURE_DEFS = [["waist","Bauch","mWaist"],["chest","Brust","mChest"],["arm","Arm","mArm"],["thigh","Bein","mThigh"],["hip","Hüfte","mHip"]];
 function measureOn(key) { return state.measures[key] || null; }
@@ -1356,6 +1472,7 @@ function renderHeute() {
 
   /* Fortschritt, eigene Ziele, Tagebuch */
   renderProgress();
+  renderKcalCard();
   renderExtras();
   renderJournal();
 
@@ -1430,6 +1547,7 @@ function daySummaryAuto(key) {
   if (kg != null) parts.push("⚖️ " + fmtNum(kg, 1) + " kg");
   if (gebeteCount(key)) parts.push("🤲 " + gebeteCount(key) + "/5");
   if (state.water[key]) parts.push("💧 " + fmtNum(state.water[key], 2) + " L");
+  if (state.kcal[key]) parts.push("🍽️ " + fmtNum(state.kcal[key]) + " kcal");
   if (state.supps[key]) parts.push("💊✓");
   return parts.join(" · ");
 }
@@ -1467,6 +1585,7 @@ function computeStreak() {
   for (const k of Object.keys(state.gebete)) if (gebeteCount(k) > 0) tracked.add(k);
   for (const k of Object.keys(state.supps)) if (state.supps[k]) tracked.add(k);
   for (const [k, v] of Object.entries(state.water)) if (v > 0) tracked.add(k);
+  for (const [k, v] of Object.entries(state.kcal)) if (v > 0) tracked.add(k);
   for (const [k, day] of Object.entries(state.extrasDone)) if (Object.values(day || {}).some(Boolean)) tracked.add(k);
   const d = new Date();
   if (!tracked.has(keyOf(d))) d.setDate(d.getDate() - 1);
@@ -1844,6 +1963,7 @@ function goalReached(id, key) {
     case "steps": return (state.steps[key] || 0) >= 10000;
     case "gebete": return gebeteCount(key) >= 5;
     case "water": return (state.water[key] || 0) >= WATER_GOAL;
+    case "kcal": return (state.kcal[key] || 0) > 0;
     case "supps": return state.suppsList.length ? state.suppsList.every(n => suppTaken(key, n)) : !!state.supps[key];
   }
   return false;
@@ -2067,6 +2187,9 @@ function renderVerlaufCharts() {
     { target: 10000, color: "var(--c-steps)" });
   drawBars("gebetChart", days14.map(k => ({ label: fmtDate(k), val: gebeteCount(k) })),
     { target: 5, color: "var(--c-gebet)" });
+  const tEst = tdeeEstimate();
+  drawBars("kcalChart", days14.map(k => ({ label: fmtDate(k), val: state.kcal[k] || 0 })),
+    { target: tEst.ready ? tEst.tdee : 0, color: "var(--c-kcal)", unit: " kcal" });
   drawBars("waterChart", days14.map(k => ({ label: fmtDate(k), val: state.water[k] || 0 })),
     { target: WATER_GOAL, color: "var(--c-steps)", unit: " L", decimals: 2 });
   const weeks = [];
@@ -2086,6 +2209,7 @@ function renderWeekReport() {
   const stepVals = keys.map(k => state.steps[k]).filter(v => v > 0);
   const gebetSum = keys.reduce((s, k) => s + gebeteCount(k), 0);
   const waterVals = keys.map(k => state.water[k]).filter(v => v > 0);
+  const kcalVals = keys.map(k => state.kcal[k]).filter(v => v > 0);
   const suppDays = keys.filter(k => state.supps[k]).length;
   const wWeek = state.weights.filter(x => keys.includes(x.date));
   const wDelta = wWeek.length >= 2 ? wWeek[wWeek.length - 1].kg - wWeek[0].kg : null;
@@ -2098,6 +2222,7 @@ function renderWeekReport() {
     ["Ø Schlaf", sleepVals.length ? fmtNum(sleepVals.reduce((a, b) => a + b) / sleepVals.length, 1) + " h" : "–"],
     ["Ø Schritte", stepVals.length ? fmtNum(stepVals.reduce((a, b) => a + b) / stepVals.length) : "–"],
     ["Gebete", gebetSum + " / 35"],
+    ["Ø Kalorien", kcalVals.length ? fmtNum(Math.round(kcalVals.reduce((a,b)=>a+b)/kcalVals.length)) + " kcal" : "–"],
     ["Ø Wasser", waterVals.length ? fmtNum(waterVals.reduce((a,b)=>a+b)/waterVals.length, 2) + " L" : "–"],
     ["Supplemente", suppDays + " von 7 Tagen"],
     ["Gewicht", wDelta != null ? (wDelta <= 0 ? "−" : "+") + fmtNum(Math.abs(wDelta), 1) + " kg" : "–"],

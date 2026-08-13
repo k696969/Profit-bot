@@ -840,6 +840,14 @@
           <input id="protInput" type="number" step="1" min="0" max="500" inputmode="numeric" placeholder="z. B. 45"></div>
       </div>
       <button class="btn" type="submit">＋ Dazurechnen</button>
+      <details class="acc" style="margin:0;padding:0 14px">
+        <summary style="font-size:15px;padding:11px 0">Auswärts gegessen? Schätzwerte</summary>
+        <div class="chips" id="estChips" style="margin-bottom:10px"></div>
+        <p class="hint" style="margin:0 0 12px">Richtwerte für typische Portionen — antippen fügt kcal + Protein hinzu und markiert den Tag als geschätzt.</p>
+      </details>
+      <label class="checkline" style="display:flex;align-items:center;gap:10px;font-size:14.5px;color:var(--ink-2)">
+        <input type="checkbox" id="kcalEstBox" style="width:20px;height:20px;min-height:0;accent-color:var(--c-kcal)" onchange="toggleKcalEst(this)">
+        Wert ist geschätzt (auswärts gegessen)</label>
       <div style="display:flex;gap:8px">
         <button type="button" class="btn ghost" style="flex:1" onclick="setKcalTotal()">Tagessumme setzen</button>
         <button type="button" class="btn danger" style="flex:1" onclick="clearKcal()">Zurücksetzen</button>
@@ -979,6 +987,7 @@ const DEFAULT_STATE = {
   water: {},            // {date: liter}
   kcal: {},             // {date: kalorien}
   protein: {},          // {date: gramm}
+  kcalEst: {},          // {date: true} — Wert geschätzt (auswärts gegessen)
   gebete: {},           // {date: 0..5}
   supps: {},            // {date: true}
   extras: [],           // [{id, name}] eigene Tagesziele
@@ -1035,6 +1044,7 @@ function load() {
       if (!s.water || typeof s.water !== "object" || Array.isArray(s.water)) s.water = {};
       if (!s.kcal || typeof s.kcal !== "object" || Array.isArray(s.kcal)) s.kcal = {};
       if (!s.protein || typeof s.protein !== "object" || Array.isArray(s.protein)) s.protein = {};
+      if (!s.kcalEst || typeof s.kcalEst !== "object" || Array.isArray(s.kcalEst)) s.kcalEst = {};
       /* Migration aus der alten Checklisten-Version */
       if (old.checks && typeof old.checks === "object" && !old._migrated6) {
         const stepsItem = (old.checkItems || []).find(i => i.type === "steps");
@@ -1145,6 +1155,7 @@ function trackerState(id, key) {
       let sub = "antippen";
       if (c > 0 || p > 0) {
         sub = pg ? `${fmtNum(p)}/${fmtNum(pg)} g Protein${p >= pg ? " ✓" : ""}` : `${fmtNum(p)} g Protein`;
+        if (state.kcalEst[key]) sub += " · ~geschätzt";
       }
       return { done: c > 0, val: c > 0 ? fmtNum(c) : "–", sub };
     }
@@ -1450,14 +1461,37 @@ function proteinGoal() {
   const w = currentWeight();
   return w ? Math.round(w * 1.6) : null;
 }
+/* Richtwerte für typische Auswärts-Portionen (kcal, Protein g) */
+const EST_MEALS = [
+  ["Döner", 700, 30], ["Dürüm", 750, 32], ["Lahmacun", 600, 25], ["Pide", 700, 26],
+  ["Pizza (ganz)", 850, 35], ["Burger-Menü", 1100, 35], ["Pasta-Teller", 700, 25],
+  ["Reis + Fleisch", 800, 45], ["Salat + Hähnchen", 450, 40], ["Frühstück groß", 700, 30],
+  ["Suppe", 300, 15], ["Beilage/Pommes", 350, 5], ["Softdrink 0,5 l", 210, 0], ["Dessert", 400, 6]
+];
 function openKcal() {
   document.getElementById("kcalInput").value = "";
   document.getElementById("protInput").value = "";
   renderKcalSheet();
   document.getElementById("kcalSheet").showModal();
 }
+function estChip(i) {
+  const [name, kcal, prot] = EST_MEALS[i];
+  const key = activeKey();
+  state.kcal[key] = (state.kcal[key] || 0) + kcal;
+  state.protein[key] = (state.protein[key] || 0) + prot;
+  state.kcalEst[key] = true;      // Tag als geschätzt markieren
+  save(); renderKcalSheet(); renderHeute();
+}
+function toggleKcalEst(box) {
+  const key = activeKey();
+  if (box.checked) state.kcalEst[key] = true; else delete state.kcalEst[key];
+  save(); renderHeute();
+}
 function renderKcalSheet() {
   const key = activeKey();
+  document.getElementById("estChips").innerHTML = EST_MEALS.map(([n, k], i) =>
+    `<button type="button" onclick="estChip(${i})">${n} · ${fmtNum(k)}</button>`).join("");
+  document.getElementById("kcalEstBox").checked = !!state.kcalEst[key];
   document.getElementById("kcalTotal").textContent = fmtNum(state.kcal[key] || 0);
   document.getElementById("kcalDayLbl").textContent =
     "kcal " + (key === todayKey() ? "heute" : "am " + fmtDate(key));
@@ -1491,6 +1525,7 @@ function setKcalTotal() {
 function clearKcal() {
   delete state.kcal[activeKey()];
   delete state.protein[activeKey()];
+  delete state.kcalEst[activeKey()];
   save(); renderKcalSheet(); renderHeute();
 }
 
@@ -1515,6 +1550,11 @@ function tdeeEstimate() {
   const days = lastNDays(28).filter(k => state.kcal[k] > 0);
   const res = { days: days.length, ready: false, target: 14 };
   if (days.length < 4) return res;
+  /* Lücken im Messzeitraum: Tage ohne Eintrag verfälschen die Rechnung,
+     weil die Gewichtsänderung sie trotzdem enthält */
+  const spanAll = Math.round((new Date(days[days.length - 1]) - new Date(days[0])) / 86400000) + 1;
+  res.gaps = Math.max(0, spanAll - days.length);
+  res.estimated = days.filter(k => state.kcalEst[k]).length;
   const all = tdeeForDays(days);
   Object.assign(res, all);
   if (all && all.noWeight) { res.noWeight = true; return res; }
@@ -1544,11 +1584,18 @@ function renderKcalCard() {
       wochen = `<div class="pbar-sub" style="margin-top:6px">Woche 1: <b>${fmtNum(t.w1.tdee)}</b> · Woche 2: <b>${fmtNum(t.w2.tdee)}</b> kcal` +
         (diff <= 250 ? ` — sehr stabil ✓` : ` — schwankt ${fmtNum(diff)} kcal, weiter messen`) + `</div>`;
     }
+    let qual = "";
+    if (t.gaps > 0) {
+      qual += `<div class="pbar-sub" style="margin-top:6px;color:var(--c-kcal)"><b>${t.gaps} Tag${t.gaps > 1 ? "e" : ""} ohne Eintrag</b> im Messzeitraum — die trag am besten nach (auch geschätzt), sonst rechnet die App zu niedrig.</div>`;
+    }
+    if (t.estimated > 0) {
+      qual += `<div class="pbar-sub" style="margin-top:4px">${t.estimated} von ${t.days} Tagen geschätzt — Wert bleibt ein Näherungswert.</div>`;
+    }
     body = `<div class="pbar-top"><span class="pbar-lbl">${ico("flame", 16)} Dein echter Verbrauch</span>
         <span class="pbar-val" style="color:var(--c-kcal)">${fmtNum(t.tdee)} kcal</span></div>
       <div class="pbar-track"><div class="pbar-fill" style="width:${pct}%;background:var(--c-kcal)"></div></div>
       <div class="pbar-sub">${t.days} Messtage · <b>${t.level}</b>${restTage ? ` — noch ${restTage} Tag${restTage > 1 ? "e" : ""} für den genauen Wert` : " — Messung komplett ✓"}</div>
-      ${wochen}
+      ${wochen}${qual}
       <div class="pbar-sub" style="margin-top:6px">Ø gegessen ${fmtNum(Math.round(t.avgIn))} kcal · Gewicht ${t.deltaKg <= 0 ? "−" : "+"}${fmtNum(Math.abs(t.deltaKg), 1)} kg in ${t.spanDays} Tagen<br>
       Zum Abnehmen (~0,5 kg/Woche): <b style="color:var(--c-weight)">${fmtNum(abnehmZiel)} kcal/Tag</b></div>`;
   } else {
@@ -1559,7 +1606,8 @@ function renderKcalCard() {
       <div class="pbar-track"><div class="pbar-fill" style="width:${pct}%;background:var(--c-kcal)"></div></div>
       <div class="pbar-sub">${t.avgIn ? "Ø bisher " + fmtNum(Math.round(t.avgIn)) + " kcal · " : ""}${
         rest ? "noch " + rest + " Tag" + (rest > 1 ? "e" : "") + " tracken" : "täglich wiegen nicht vergessen"} —
-        dann rechnet die App deinen echten Verbrauch aus.${t.noWeight ? " <b>Wiege dich regelmäßig!</b>" : ""}</div>`;
+        dann rechnet die App deinen echten Verbrauch aus.${t.noWeight ? " <b>Wiege dich regelmäßig!</b>" : ""}</div>
+      ${t.gaps > 0 ? `<div class="pbar-sub" style="margin-top:4px;color:var(--c-kcal)"><b>${t.gaps} Tag${t.gaps > 1 ? "e" : ""} ohne Eintrag</b> — bitte nachtragen (Datum oben antippen).</div>` : ""}`;
   }
   document.getElementById("kcalCardBody").innerHTML = body;
 }
@@ -1766,7 +1814,7 @@ function daySummaryAuto(key) {
   if (kg != null) parts.push("⚖️ " + fmtNum(kg, 1) + " kg");
   if (gebeteCount(key)) parts.push("🤲 " + gebeteCount(key) + "/5");
   if (state.water[key]) parts.push("💧 " + fmtNum(state.water[key], 2) + " L");
-  if (state.kcal[key]) parts.push("🍽️ " + fmtNum(state.kcal[key]) + " kcal");
+  if (state.kcal[key]) parts.push("🍽️ " + fmtNum(state.kcal[key]) + " kcal" + (state.kcalEst[key] ? " (geschätzt)" : ""));
   if (state.protein[key]) parts.push("🥩 " + fmtNum(state.protein[key]) + " g P");
   if (state.supps[key]) parts.push("💊✓");
   return parts.join(" · ");
@@ -2972,7 +3020,7 @@ function renderProfil() {
 }
 
 /* ── App-Version & erzwungenes Update (gegen alten Cache) ── */
-const APP_VERSION = "v27";
+const APP_VERSION = "v28";
 async function forceUpdate() {
   try {
     if ("serviceWorker" in navigator) {

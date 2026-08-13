@@ -1,0 +1,16 @@
+{
+  "name": "Wandel — Transformations-Tracker",
+  "short_name": "Wandel",
+  "description": "Abnehm- und Transformations-Tracker: Kalorien, Gewicht, Training, Wasser — evidenzbasiert.",
+  "lang": "de",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#f4f6f4",
+  "theme_color": "#f4f6f4",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

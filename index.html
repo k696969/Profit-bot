@@ -1498,34 +1498,62 @@ function clearKcal() {
    Verbrauch = Ø Zufuhr − (Gewichtsänderung × 7700 kcal/kg) / Tage
    ≈ 7700 kcal pro kg Körpergewicht (Näherung; Hall 2011 zeigt: über Monate
    ungenau, für eine 1–2-Wochen-Messung aber der Standardansatz). */
-function tdeeEstimate() {
-  const days = lastNDays(21).filter(k => state.kcal[k] > 0);
-  if (days.length < 4) return { days: days.length, ready: false };
-  const first = days[0], last = days[days.length - 1];
+function tdeeForDays(dayKeys) {
+  if (!dayKeys.length) return null;
+  const first = dayKeys[0], last = dayKeys[dayKeys.length - 1];
   const wIn = state.weights.filter(w => w.date >= first && w.date <= last);
-  const avgIn = days.reduce((a, k) => a + state.kcal[k], 0) / days.length;
-  if (wIn.length < 2) return { days: days.length, ready: false, avgIn, noWeight: true };
+  const avgIn = dayKeys.reduce((a, k) => a + state.kcal[k], 0) / dayKeys.length;
+  if (wIn.length < 2) return { avgIn, noWeight: true, days: dayKeys.length };
   const deltaKg = wIn[wIn.length - 1].kg - wIn[0].kg;
   const spanDays = Math.max(1, Math.round((new Date(wIn[wIn.length - 1].date) - new Date(wIn[0].date)) / 86400000));
-  const tdee = avgIn - (deltaKg * 7700 / spanDays);
-  return { days: days.length, ready: days.length >= 7 && spanDays >= 5, avgIn, deltaKg, spanDays, tdee: Math.round(tdee) };
+  return { avgIn, deltaKg, spanDays, days: dayKeys.length, tdee: Math.round(avgIn - (deltaKg * 7700 / spanDays)) };
+}
+function tdeeEstimate() {
+  /* Messung läuft über 14 Tage: Woche 1 gibt einen Richtwert,
+     mit Woche 2 wird der Wert deutlich stabiler (Wasserschwankungen
+     mitteln sich heraus). */
+  const days = lastNDays(28).filter(k => state.kcal[k] > 0);
+  const res = { days: days.length, ready: false, target: 14 };
+  if (days.length < 4) return res;
+  const all = tdeeForDays(days);
+  Object.assign(res, all);
+  if (all && all.noWeight) { res.noWeight = true; return res; }
+  res.ready = days.length >= 7 && all.spanDays >= 5;
+  /* Genauigkeitsstufe */
+  res.level = days.length >= 14 ? "genau" : days.length >= 11 ? "gut" : "Richtwert";
+  /* Wochenweise Aufschlüsselung ab 8 Messtagen */
+  if (days.length >= 12) {          /* Woche 2 erst ab 5 Messtagen aussagekräftig */
+    res.w1 = tdeeForDays(days.slice(0, 7));
+    res.w2 = tdeeForDays(days.slice(7, 14));
+  }
+  return res;
 }
 function renderKcalCard() {
   const card = document.getElementById("kcalCard");
   const t = tdeeEstimate();
   if (!t.days) { card.hidden = true; return; }
   card.hidden = false;
-  const pct = Math.min(100, t.days / 7 * 100);
   let body;
   if (t.ready) {
-    const p = state.profile;
     const abnehmZiel = Math.round(t.tdee - 500);
+    const restTage = Math.max(0, t.target - t.days);
+    const pct = Math.min(100, t.days / t.target * 100);
+    let wochen = "";
+    if (t.w1 && t.w1.tdee && t.w2 && t.w2.tdee) {
+      const diff = Math.abs(t.w1.tdee - t.w2.tdee);
+      wochen = `<div class="pbar-sub" style="margin-top:6px">Woche 1: <b>${fmtNum(t.w1.tdee)}</b> · Woche 2: <b>${fmtNum(t.w2.tdee)}</b> kcal` +
+        (diff <= 250 ? ` — sehr stabil ✓` : ` — schwankt ${fmtNum(diff)} kcal, weiter messen`) + `</div>`;
+    }
     body = `<div class="pbar-top"><span class="pbar-lbl">${ico("flame", 16)} Dein echter Verbrauch</span>
         <span class="pbar-val" style="color:var(--c-kcal)">${fmtNum(t.tdee)} kcal</span></div>
-      <div class="pbar-sub">Ø gegessen ${fmtNum(Math.round(t.avgIn))} kcal · Gewicht ${t.deltaKg <= 0 ? "−" : "+"}${fmtNum(Math.abs(t.deltaKg), 1)} kg in ${t.spanDays} Tagen<br>
+      <div class="pbar-track"><div class="pbar-fill" style="width:${pct}%;background:var(--c-kcal)"></div></div>
+      <div class="pbar-sub">${t.days} Messtage · <b>${t.level}</b>${restTage ? ` — noch ${restTage} Tag${restTage > 1 ? "e" : ""} für den genauen Wert` : " — Messung komplett ✓"}</div>
+      ${wochen}
+      <div class="pbar-sub" style="margin-top:6px">Ø gegessen ${fmtNum(Math.round(t.avgIn))} kcal · Gewicht ${t.deltaKg <= 0 ? "−" : "+"}${fmtNum(Math.abs(t.deltaKg), 1)} kg in ${t.spanDays} Tagen<br>
       Zum Abnehmen (~0,5 kg/Woche): <b style="color:var(--c-weight)">${fmtNum(abnehmZiel)} kcal/Tag</b></div>`;
   } else {
     const rest = Math.max(0, 7 - t.days);
+    const pct = Math.min(100, t.days / 7 * 100);
     body = `<div class="pbar-top"><span class="pbar-lbl">${ico("flame", 16)} Verbrauch messen</span>
         <span class="pbar-val" style="color:var(--c-kcal)">${t.days}/7</span></div>
       <div class="pbar-track"><div class="pbar-fill" style="width:${pct}%;background:var(--c-kcal)"></div></div>
@@ -2944,7 +2972,7 @@ function renderProfil() {
 }
 
 /* ── App-Version & erzwungenes Update (gegen alten Cache) ── */
-const APP_VERSION = "v26";
+const APP_VERSION = "v27";
 async function forceUpdate() {
   try {
     if ("serviceWorker" in navigator) {

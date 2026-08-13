@@ -747,7 +747,13 @@
         <button class="btn ghost" onclick="exportData()">Exportieren</button>
         <button class="btn ghost" onclick="document.getElementById('importFile').click()">Importieren</button>
         <input type="file" id="importFile" accept="application/json" hidden onchange="importData(event)">
-        <button class="btn danger" onclick="resetData()">Zurücksetzen</button>
+      </div>
+      <p class="hint" style="margin:14px 0 6px"><b>Einzeln zurücksetzen</b> — der Rest bleibt erhalten:</p>
+      <div class="btnrow">
+        <button class="btn danger" onclick="resetKcalMessung()">Kalorien</button>
+        <button class="btn danger" onclick="resetPart('training')">Training</button>
+        <button class="btn danger" onclick="resetPart('weights')">Gewicht &amp; Maße</button>
+        <button class="btn danger" onclick="resetData()">Alles</button>
       </div>
     </div>
 
@@ -1596,6 +1602,7 @@ function renderKcalCard() {
       <div class="pbar-track"><div class="pbar-fill" style="width:${pct}%;background:var(--c-kcal)"></div></div>
       <div class="pbar-sub">${t.days} Messtage · <b>${t.level}</b>${restTage ? ` — noch ${restTage} Tag${restTage > 1 ? "e" : ""} für den genauen Wert` : " — Messung komplett ✓"}</div>
       ${wochen}${qual}
+      <p style="margin:10px 0 0"><button type="button" class="linkbtn" onclick="resetKcalMessung()">Messung neu starten</button></p>
       <div class="pbar-sub" style="margin-top:6px">Ø gegessen ${fmtNum(Math.round(t.avgIn))} kcal · Gewicht ${t.deltaKg <= 0 ? "−" : "+"}${fmtNum(Math.abs(t.deltaKg), 1)} kg in ${t.spanDays} Tagen<br>
       Zum Abnehmen (~0,5 kg/Woche): <b style="color:var(--c-weight)">${fmtNum(abnehmZiel)} kcal/Tag</b></div>`;
   } else {
@@ -1607,7 +1614,8 @@ function renderKcalCard() {
       <div class="pbar-sub">${t.avgIn ? "Ø bisher " + fmtNum(Math.round(t.avgIn)) + " kcal · " : ""}${
         rest ? "noch " + rest + " Tag" + (rest > 1 ? "e" : "") + " tracken" : "täglich wiegen nicht vergessen"} —
         dann rechnet die App deinen echten Verbrauch aus.${t.noWeight ? " <b>Wiege dich regelmäßig!</b>" : ""}</div>
-      ${t.gaps > 0 ? `<div class="pbar-sub" style="margin-top:4px;color:var(--c-kcal)"><b>${t.gaps} Tag${t.gaps > 1 ? "e" : ""} ohne Eintrag</b> — bitte nachtragen (Datum oben antippen).</div>` : ""}`;
+      ${t.gaps > 0 ? `<div class="pbar-sub" style="margin-top:4px;color:var(--c-kcal)"><b>${t.gaps} Tag${t.gaps > 1 ? "e" : ""} ohne Eintrag</b> — bitte nachtragen (Datum oben antippen).</div>` : ""}
+      <p style="margin:10px 0 0"><button type="button" class="linkbtn" onclick="resetKcalMessung()">Messung neu starten</button></p>`;
   }
   document.getElementById("kcalCardBody").innerHTML = body;
 }
@@ -3019,8 +3027,17 @@ function renderProfil() {
     rows.map(([k, v]) => `<div class="item"><span>${k}</span><b>${v}</b></div>`).join("");
 }
 
+/* ── Kalorien-Messung neu starten (nur kcal/Protein, sonst nichts) ── */
+function resetKcalMessung() {
+  const n = Object.keys(state.kcal).length;
+  if (!confirm("Kalorien-Messung neu starten?\n\n" + n + " Tage mit Kalorien werden gelöscht (auch Protein und die Geschätzt-Markierungen).\n\nGewicht, Training, Schlaf, Schritte, Wasser, Gebete und Supplemente bleiben erhalten.")) return;
+  state.kcal = {}; state.protein = {}; state.kcalEst = {};
+  save(); renderHeute();
+  alert("Messung zurückgesetzt — ab heute sauber neu tracken. 💪");
+}
+
 /* ── App-Version & erzwungenes Update (gegen alten Cache) ── */
-const APP_VERSION = "v28";
+const APP_VERSION = "v29";
 async function forceUpdate() {
   try {
     if ("serviceWorker" in navigator) {
@@ -3063,6 +3080,18 @@ function importData(ev) {
   };
   reader.readAsText(file);
   ev.target.value = "";
+}
+function resetPart(what) {
+  if (what === "training") {
+    if (!confirm("Alle Trainings-Einheiten löschen?\n\n" + state.workouts.length + " Einheiten inkl. Sätze und PRs.\nDeine Pläne bleiben erhalten.")) return;
+    state.workouts = [];
+  }
+  if (what === "weights") {
+    if (!confirm("Alle Gewichts- und Maß-Einträge löschen?\n\n" + state.weights.length + " Wiegungen und alle Körpermaße.")) return;
+    state.weights = []; state.measures = {};
+  }
+  save(); renderProfil(); renderHeute();
+  alert("Zurückgesetzt.");
 }
 function resetData() {
   if (!confirm("Wirklich ALLE Daten löschen? Das kann nicht rückgängig gemacht werden. Exportiere vorher ein Backup!")) return;

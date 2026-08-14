@@ -1552,7 +1552,7 @@ function tdeeEstimate() {
      mit Woche 2 wird der Wert deutlich stabiler (Wasserschwankungen
      mitteln sich heraus). */
   const days = lastNDays(28).filter(k => state.kcal[k] > 0);
-  const res = { days: days.length, ready: false, target: 14 };
+  const res = { days: days.length, ready: false, target: 7 };
   if (days.length < 4) return res;
   /* Lücken im Messzeitraum: Tage ohne Eintrag verfälschen die Rechnung,
      weil die Gewichtsänderung sie trotzdem enthält */
@@ -1564,9 +1564,9 @@ function tdeeEstimate() {
   if (all && all.noWeight) { res.noWeight = true; return res; }
   res.ready = days.length >= 7 && all.spanDays >= 5;
   /* Genauigkeitsstufe */
-  res.level = days.length >= 14 ? "genau" : days.length >= 11 ? "gut" : "Richtwert";
+  res.level = days.length >= 7 ? "genau" : days.length >= 6 ? "gut" : "Richtwert";
   /* Wochenweise Aufschlüsselung ab 8 Messtagen */
-  if (days.length >= 12) {          /* Woche 2 erst ab 5 Messtagen aussagekräftig */
+  if (days.length >= 12) {          /* Zweite Woche nur, wenn du freiwillig weitermisst */
     res.w1 = tdeeForDays(days.slice(0, 7));
     res.w2 = tdeeForDays(days.slice(7, 14));
   }
@@ -1597,23 +1597,20 @@ function renderKcalCard() {
     body = `<div class="pbar-top"><span class="pbar-lbl">${ico("flame", 16)} Dein echter Verbrauch</span>
         <span class="pbar-val" style="color:var(--c-kcal)">${fmtNum(t.tdee)} kcal</span></div>
       <div class="pbar-track"><div class="pbar-fill" style="width:${pct}%;background:var(--c-kcal)"></div></div>
-      <div class="pbar-sub"><b>${t.days}/14</b> Messtage · <b>${t.level}</b>${restTage ? ` — noch ${restTage} Tag${restTage > 1 ? "e" : ""} für den genauen Wert` : " — Messung komplett ✓"}</div>
+      <div class="pbar-sub"><b>${t.days}/7</b> Messtage · <b>${t.level}</b>${restTage ? ` — noch ${restTage} Tag${restTage > 1 ? "e" : ""}` : " — Messung komplett ✓ (weiter messen macht den Wert noch stabiler)"}</div>
       ${wochen}${qual}
       <p style="margin:10px 0 0"><button type="button" class="linkbtn" onclick="resetKcalMessung()">Messung neu starten</button></p>
       <div class="pbar-sub" style="margin-top:6px">Ø gegessen ${fmtNum(Math.round(t.avgIn))} kcal · Gewicht ${t.deltaKg <= 0 ? "−" : "+"}${fmtNum(Math.abs(t.deltaKg), 1)} kg in ${t.spanDays} Tagen<br>
       Zum Abnehmen (~0,5 kg/Woche): <b style="color:var(--c-weight)">${fmtNum(abnehmZiel)} kcal/Tag</b></div>`;
   } else {
-    const rest = Math.max(0, 14 - t.days);
-    const restBis7 = Math.max(0, 7 - t.days);
-    const pct = Math.min(100, t.days / 14 * 100);
+    const rest = Math.max(0, 7 - t.days);
+    const pct = Math.min(100, t.days / 7 * 100);
     body = `<div class="pbar-top"><span class="pbar-lbl">${ico("flame", 16)} Verbrauch messen</span>
-        <span class="pbar-val" style="color:var(--c-kcal)">${t.days}/14</span></div>
+        <span class="pbar-val" style="color:var(--c-kcal)">${t.days}/7</span></div>
       <div class="pbar-track"><div class="pbar-fill" style="width:${pct}%;background:var(--c-kcal)"></div></div>
       <div class="pbar-sub">${t.days === 0
-        ? "Los geht's: Kalorien-Kachel antippen und heute alles eintragen — 14 Tage, dann kennst du deinen echten Verbrauch."
-        : `${t.avgIn ? "Ø bisher " + fmtNum(Math.round(t.avgIn)) + " kcal · " : ""}${
-            restBis7 ? "noch " + restBis7 + " Tag" + (restBis7 > 1 ? "e" : "") + " bis zum ersten Wert"
-                     : "erster Wert kommt gleich"} · ${rest} bis zum genauen Ergebnis${
+        ? "Los geht's: Kalorien-Kachel antippen und heute alles eintragen — 7 Tage, dann kennst du deinen echten Verbrauch."
+        : `${t.avgIn ? "Ø bisher " + fmtNum(Math.round(t.avgIn)) + " kcal · " : ""}noch ${rest} Tag${rest > 1 ? "e" : ""} — täglich wiegen nicht vergessen${
             t.noWeight ? " — <b>Wiege dich regelmäßig!</b>" : ""}`}</div>
       ${t.gaps > 0 ? `<div class="pbar-sub" style="margin-top:4px;color:var(--c-kcal)"><b>${t.gaps} Tag${t.gaps > 1 ? "e" : ""} ohne Eintrag</b> — bitte nachtragen (Datum oben antippen).</div>` : ""}
       ${t.days ? `<p style="margin:10px 0 0"><button type="button" class="linkbtn" onclick="resetKcalMessung()">Messung neu starten</button></p>` : ""}`;
@@ -3038,7 +3035,7 @@ function resetKcalMessung() {
 }
 
 /* ── App-Version & erzwungenes Update (gegen alten Cache) ── */
-const APP_VERSION = "v30";
+const APP_VERSION = "v31";
 async function forceUpdate() {
   try {
     if ("serviceWorker" in navigator) {
@@ -3785,6 +3782,17 @@ function renderAnalyseView() {
 document.getElementById("todayDate").textContent =
   new Date().toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "short" });
 seedUserData();
+/* Einmalig: angefangene Kalorien-Messung zurücksetzen, damit sauber bei 0/7 gestartet wird */
+if (!state._kcalReset7) {
+  const n = Object.keys(state.kcal || {}).length;
+  state._kcalReset7 = true;
+  if (n > 0) {
+    if (confirm("Kalorien-Messung neu starten?\n\nDu hast " + n + " Tage erfasst. Sollen die geloescht werden, damit du sauber bei 0/7 anfaengst?\n\nGewicht, Training und alles andere bleibt erhalten.")) {
+      state.kcal = {}; state.protein = {}; state.kcalEst = {};
+    }
+  }
+  save();
+}
 /* Icons in statische Überschriften einsetzen */
 function paintStaticIcons() {
   const map = { "ic-prog": ["training", "var(--c-train)"], "ic-diary": ["note", null], "ic-hist": ["calendar", null],

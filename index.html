@@ -879,6 +879,7 @@
     <div class="sheet-grip"></div>
     <h3>Training eintragen</h3>
     <div style="display:flex;flex-direction:column;gap:10px">
+      <div id="twExisting"></div>
       <div class="chips" id="twPlans"></div>
       <div class="chips" id="twType"></div>
       <div class="chips" id="twInt"></div>
@@ -888,6 +889,7 @@
       <button type="button" class="minibtn" onclick="addExercise()">＋ Übung hinzufügen (Sätze · Wdh. · kg)</button>
       <button type="button" class="linkbtn" onclick="savePlanFromDraft()">📋 Diese Übungen als Plan speichern</button>
       <button type="button" class="btn" onclick="saveWorkout()">Speichern</button>
+      <button type="button" class="btn danger" id="twDelBtn" hidden onclick="delWorkout(editingWorkoutId)">Diese Einheit löschen</button>
       <button type="button" class="btn ghost" onclick="closeSheet('trainSheet')">Abbrechen</button>
     </div>
   </div>
@@ -1909,6 +1911,30 @@ function initWorkoutSheet() {
   document.getElementById("exList").innerHTML = "";
   renderTwType();
   renderTwPlans();
+  renderTwExisting();
+}
+/* Schon eingetragene Einheiten des aktiven Tages — direkt im Sheet
+   bearbeiten oder löschen, ohne den Umweg über den Training-Tab */
+function renderTwExisting() {
+  const box = document.getElementById("twExisting");
+  if (!box) return;
+  const del = document.getElementById("twDelBtn");
+  if (del) del.hidden = !editingWorkoutId;
+  if (editingWorkoutId) { box.innerHTML = ""; return; }
+  const key = activeKey();
+  const list = workoutsOn(key);
+  if (!list.length) { box.innerHTML = ""; return; }
+  box.innerHTML = `<div class="hint" style="margin:0 0 6px">Am ${fmtDate(key)} schon eingetragen:</div>` +
+    list.map(w => {
+      const t = WORKOUT_TYPES[w.type] || WORKOUT_TYPES.sonst;
+      const n = (w.exercises || []).length;
+      return `<div class="krow">
+        <span class="kico">${t.ico}</span>
+        <div class="kmain"><div class="kname">${t.label}<span>${w.min ? w.min + " min" : ""}${n ? (w.min ? " · " : "") + n + " Übungen" : ""}</span></div></div>
+        <button type="button" class="minibtn" onclick="editWorkout('${w.id}')">Bearbeiten</button>
+        <button type="button" class="minibtn danger" onclick="delWorkout('${w.id}')">Löschen</button>
+      </div>`;
+    }).join("");
 }
 function renderTwPlans() {
   document.getElementById("twPlans").innerHTML = state.plans.map(p =>
@@ -2124,7 +2150,8 @@ let editingWorkoutId = null;
 function editWorkout(id) {
   const w = state.workouts.find(x => x.id === id);
   if (!w) return;
-  document.getElementById("trainSheet").showModal();
+  const dlg = document.getElementById("trainSheet");
+  if (!dlg.open) dlg.showModal();          /* schon offen? dann nicht doppelt öffnen */
   editingWorkoutId = id;
   twDraft = { type: w.type || "kraft", intensity: w.intensity || "moderat",
     exercises: (w.exercises || []).map(e => {
@@ -2133,8 +2160,8 @@ function editWorkout(id) {
       return ex;
     }) };
   document.getElementById("twMin").value = w.min || 60;
-  renderTwType(); renderExList();
-  document.getElementById("trainSheet").querySelector("h3").textContent = "Einheit bearbeiten · " + fmtDate(w.date);
+  renderTwType(); renderExList(); renderTwExisting();
+  dlg.querySelector("h3").textContent = "Einheit bearbeiten · " + fmtDate(w.date);
 }
 function saveWorkout() {
   syncDraft();
@@ -2157,9 +2184,24 @@ function saveWorkout() {
   if (!document.getElementById("tab-training").hidden) renderTraining();
 }
 function delWorkout(id) {
-  if (!confirm("Diese Trainings-Einheit löschen?")) return;
-  state.workouts = state.workouts.filter(w => w.id !== id);
-  save(); renderTraining(); renderHeute();
+  const w = state.workouts.find(x => x.id === id);
+  if (!w) return;
+  const t = WORKOUT_TYPES[w.type] || WORKOUT_TYPES.sonst;
+  const n = (w.exercises || []).length;
+  const info = t.label + " · " + fmtDate(w.date)
+    + (w.min ? " · " + w.min + " min" : "")
+    + (n ? "\n" + (w.exercises || []).map(e => e.name + " (" + e.sets.length + (e.sets.length === 1 ? " Satz)" : " Sätze)")).join("\n") : "");
+  if (!confirm("Diese Trainings-Einheit löschen?\n\n" + info + "\n\nDas lässt sich nicht rückgängig machen.")) return;
+  state.workouts = state.workouts.filter(x => x.id !== id);
+  const dlg = document.getElementById("trainSheet");
+  if (editingWorkoutId === id) {          /* gerade bearbeitete Einheit gelöscht */
+    editingWorkoutId = null;
+    if (dlg.open) dlg.close();
+  }
+  save();
+  if (dlg.open) renderTwExisting();       /* Liste im Sheet aktualisieren, Entwurf bleibt */
+  renderHeute();
+  if (!document.getElementById("tab-training").hidden) renderTraining();
 }
 
 /* Übungen, bei denen negatives Gewicht = Unterstützung bedeutet */
@@ -2283,8 +2325,8 @@ function renderTraining() {
         <span class="woico">${t.ico}</span>
         <div class="wotitle"><b>${t.label}</b>
           <span>${fmtDate(w.date, { weekday: "short", day: "2-digit", month: "2-digit" })}${w.min ? " · " + w.min + " min" : ""}${w.intensity ? " · " + (WORKOUT_INT[w.intensity] || "") : ""}</span></div>
-        <button class="del-x" aria-label="Einheit bearbeiten" onclick="editWorkout('${w.id}')" title="Bearbeiten">✎</button>
-        <button class="del-x" aria-label="Einheit löschen" onclick="delWorkout('${w.id}')">×</button>
+        <button type="button" class="minibtn" onclick="editWorkout('${w.id}')">Bearbeiten</button>
+        <button type="button" class="minibtn danger" onclick="delWorkout('${w.id}')">Löschen</button>
       </div>
       ${exHtml}</div>`;
   }).join("");
@@ -3037,7 +3079,7 @@ function resetKcalMessung() {
 }
 
 /* ── App-Version & erzwungenes Update (gegen alten Cache) ── */
-const APP_VERSION = "v31";
+const APP_VERSION = "v32";
 async function forceUpdate() {
   try {
     if ("serviceWorker" in navigator) {
